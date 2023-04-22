@@ -15,7 +15,6 @@ import {
   AbsoluteOrientationSensor,
   LinearAccelerationSensor,
   Gyroscope,
-  Accelerometer,
 } from "./motion-sensors.js";
 
 
@@ -148,6 +147,9 @@ class CaptureSession {
   updateText() {
     this.output.innerText = `Samples\n\
       Rot=${JSON.stringify(quatToEuler(this.orientation.quaternion).map(v=>v.toFixed(2)), null, 2)}\n\
+      ddX=${this.accelerometer.x.toFixed(2)}\n\
+      ddY=${this.accelerometer.y.toFixed(2)}\n\
+      ddZ=${this.accelerometer.z.toFixed(2)}\n\
       A=${this.readings.accelerometer.length} \
       O=${this.readings.orientation.length} \
       G=${this.readings.gyroscope.length}`;
