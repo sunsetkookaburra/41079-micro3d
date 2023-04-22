@@ -3,10 +3,10 @@
 <head>
   <title>ImgCap</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <script src="./exif.js" async></script>
+  <script src="./motion-sensors.js" type="module" async></script>
+  <script src="./imgcap.mjs" type="module" async></script>
   <style>
-    input {
-      width: 100%;
-    }
     img {
       width: 100%;
       object-fit: contain;
@@ -30,15 +30,18 @@
   <main>
     <form action="javascript:void(0)" onchange="handleCapture(this)">
       <fieldset>
-        <legend>Capture Images</legend>
-        <!-- <label>abc</label> -->
-        <input id="photo" type="file" capture="environment" accept="image/*"/>
+        <legend>Capture Motion</legend>
+        <p>
+          <input id="logger" type="checkbox"/><label for="logger">Enable Logging</label>
+        </p>
+        <p>
+          <a id="captures" download="capture.json">Samples A=0 O=0 G=0</a>
+        </p>
+        <p>
+          <button id="export" disabled>Export</button>
+        </p>
       </fieldset>
     </form>
-    <section id="captures"></section>
-    <!-- <pre><output id="out"></output></pre> -->
-    <!-- <canvas width="192" height="108"></canvas> -->
   </main>
-  <script src="./imgcap.js"></script>
 </body>
 </html>
