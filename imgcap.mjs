@@ -111,7 +111,7 @@ class CaptureSession {
     };
     this.accelerometer.addEventListener("reading", () => {
       this.readings.accelerometer.push([
-        window.performance.now(),
+        Date.now(),
         this.accelerometer.x,
         this.accelerometer.y,
         this.accelerometer.z,
@@ -120,14 +120,14 @@ class CaptureSession {
     });
     this.orientation.addEventListener("reading", () => {
       this.readings.orientation.push([
-        window.performance.now(),
+        Date.now(),
         ...quatToEuler(this.orientation.quaternion)
       ]);
       this.updateText();
     });
     this.gyroscope.addEventListener("reading", () => {
       this.readings.gyroscope.push([
-        window.performance.now(),
+        Date.now(),
         this.gyroscope.x,
         this.gyroscope.y,
         this.gyroscope.z,
