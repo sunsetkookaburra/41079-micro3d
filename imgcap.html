@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ImgCap</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <style>
+    input {
+      width: 100%;
+    }
+    img {
+      width: 100%;
+      object-fit: contain;
+    }
+    canvas {
+      background-color: black;
+    }
+    figure {
+      padding: 2rem;
+      background-color: #eee;
+    }
+    figcaption {
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>QR:3D ImgCap</h1>
+  </header>
+  <main>
+    <form action="javascript:void(0)" onchange="handleCapture(this)">
+      <fieldset>
+        <legend>Capture Images</legend>
+        <!-- <label>abc</label> -->
+        <input id="photo" type="file" capture="environment" accept="image/*"/>
+      </fieldset>
+    </form>
+    <section id="captures"></section>
+    <!-- <pre><output id="out"></output></pre> -->
+    <!-- <canvas width="192" height="108"></canvas> -->
+  </main>
+  <script src="./imgcap.js"></script>
+</body>
+</html>
