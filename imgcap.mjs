@@ -15,7 +15,7 @@ import {
   AbsoluteOrientationSensor,
   LinearAccelerationSensor,
   Gyroscope,
-} from "./motion-sensors.js";
+} from "./lib/motion-sensors.js";
 
 
 // window.addEventListener("load", async () => {
@@ -87,7 +87,7 @@ import {
 function quatToEuler([x, y, z, w]) {
   return [
     Math.atan2(2 * (w * x + y * z), 1 - 2 * (x * x + y * y)),
-    2 * Math.atan2(1 + 2 * (w * y - x * z), 1 - 2 * (w * y - x * z)),
+    2 * Math.atan2(Math.sqrt(1 + 2 * (w * y - x * z)), Math.sqrt(1 - 2 * (w * y - x * z))) - Math.PI / 2,
     Math.atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z)),
   ];
 }
