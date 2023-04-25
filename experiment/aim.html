@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    :root {
+      height: 100%;
+      height: -webkit-available;
+    }
+    body {
+      display: flex;
+      margin: 0;
+      height: 100%;
+      align-items: center;
+      justify-content: center;
+      /*
+      background: linear-gradient(0, #333 50%, #777 50%);
+      font-family: monospace;
+      color: #eee;
+      font-size: 3rem;
+      text-shadow: 0px 5px 15px black;
+      cursor: pointer;
+      white-space: pre-wrap; */
+    }
+    button {
+      font-size: 3rem;
+    }
+    p {
+      font-family: monospace;
+      color: #eee;
+      font-size: 3rem;
+      text-shadow: 0px 5px 15px black;
+      white-space: pre-wrap;
+    }
+    svg {
+      position: fixed;
+      z-index: -1;
+      width: 100%;
+      height: 100%;
+      scale: 2;
+    }
+  </style>
+</head>
+<body>
+  <button id="start">Click to Begin</button>
+  <svg id="horizon" viewBox="0 0 1 1" preserveAspectRatio="none" style="background: #333">
+    <path fill="#555" d="M 0,0.5 L 0,1 L 1,1 L 1,0.5 Z"/>
+  </svg>
+  <script>
+    function rotateX(vec, angle) {
+      return [
+        vec[0],
+        vec[1] * Math.cos(angle) - vec[2] * Math.sin(angle),
+        vec[1] * Math.sin(angle) + vec[2] * Math.cos(angle),
+      ];
+    }
+    function rotateY(vec, angle) {
+      return [
+        vec[0] * Math.cos(angle) + vec[2] * Math.sin(angle),
+        vec[1],
+        vec[2] * Math.cos(angle) - vec[0] * Math.sin(angle),
+      ];
+    }
+    function rotateZ(vec, angle) {
+      return [
+        vec[0] * Math.cos(angle) - vec[1] * Math.sin(angle),
+        vec[1] * Math.sin(angle) + vec[2] * Math.cos(angle),
+        vec[2],
+      ];
+    }
+
+    document.getElementById("start").addEventListener("click", async ev => {
+      const output = document.createElement("p");
+      output.innerText = "...";
+      ev.target.replaceWith(output);
+
+      window.addEventListener("error", ev => {
+        controller.abort();
+        output.innerText = ev.error;
+      });
+
+      const controller = new AbortController();
+
+      await DeviceOrientationEvent.requestPermission?.();
+
+      window.addEventListener("deviceorientation", ev => {
+        // ZYX
+        // const heading = ev.webkitCompassHeading ? 360 - ev.webkitCompassHeading : ev.alpha;
+
+        // const orientation = rotateX(rotateY(rotateZ([0, 1, 0], heading), ev.beta), ev.alpha);
+
+        // output.innerText = `Ball ${orientation.map(v=>v.toFixed(2))}`;
+
+        output.innerText = `\
+          Yaw   = ${ev.alpha.toFixed(2).padStart(8, " ")}\n\
+          Pitch = ${ev.beta.toFixed(2).padStart(8, " ")}\n\
+          Roll  = ${ev.gamma.toFixed(2).padStart(8, " ")}\
+        `;
+
+        // const horizon = document.getElementById("horizon");
+        // horizon.style.rotate = `${(-ev.gamma).toFixed(2)}deg`;
+        // horizon.style.translate = `0 ${(Math.abs(ev.beta / 1.8) - 50).toFixed(2)}%`;
+        // horizon.style.rotate = `${(ev.alpha).toFixed(2)}deg`;
+
+        // output.innerText = `${(ev.alpha).toFixed(2)}%`;
+      }, { signal: controller.signal });
+    });
+  </script>
+</body>
+</html>
