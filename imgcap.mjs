@@ -84,13 +84,41 @@ import {
 //   });
 // }
 
+// function quatToEuler([x, y, z, w]) {
+//   return [
+//     Math.atan2(
+//       2 * (x * w - y * z),
+//       1 - 2 * (x * x + y * y)
+//     ),
+//     Math.asin(
+//       2 * (x * y + z * w),
+//     ),
+//     Math.atan2(
+//       2 * (y * w - x * z),
+//       1 - 2 * (y * y + z * z)
+//     ),
+//   ];
+// }
+
 function quatToEuler([x, y, z, w]) {
   return [
-    Math.atan2(2 * (w * x + y * z), 1 - 2 * (x * x + y * y)),
-    2 * Math.atan2(Math.sqrt(1 + 2 * (w * y - x * z)), Math.sqrt(1 - 2 * (w * y - x * z))) - Math.PI / 2,
-    Math.atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z)),
+    Math.atan2(
+      2 * (w * x + y * z),
+      1 - 2 * (x * x + y * y)
+    ),
+    2 * Math.atan2(
+      Math.sqrt(1 + 2 * (w * y - x * z)),
+      Math.sqrt(1 - 2 * (w * y - x * z))
+    ) - Math.PI / 2,
+    Math.atan2(
+      2 * (w * z + x * y),
+      1 - 2 * (y * y + z * z)
+    ),
   ];
 }
+//a
+
+globalThis.quatToEuler = quatToEuler;
 
 class CaptureSession {
   constructor() {
@@ -98,7 +126,7 @@ class CaptureSession {
     //@ts-ignore
     this.output = document.getElementById("captures");
     this.accelerometer = new LinearAccelerationSensor();
-    this.orientation = new AbsoluteOrientationSensor();
+    this.orientation = new AbsoluteOrientationSensor({ referenceFrame: "screen" });
     this.gyroscope = new Gyroscope();
     this.readings = {
       /** @type any[] */

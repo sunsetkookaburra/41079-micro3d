@@ -1,3 +1,13 @@
+export function range(arr) {
+  let min = Infinity;
+  let max = -Infinity;
+  for (const x of arr) {
+    if (x < min) min = x;
+    if (x > max) max = x;
+  }
+  return { min, max };
+}
+
 class Complex {
   constructor(re = 0, im = 0) {
     this.re = re;

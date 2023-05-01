@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Accelerometer</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <header>
+    <h1>Accelerometer</h1>
+  </header>
+  <main>
+    <button id="start">Start</button>
+    <br/>
+    <label>X: <output id="x"></output></label>
+    <br/>
+    <label>Y: <output id="y"></output></label>
+    <br/>
+    <label>Z: <output id="z"></output></label>
+    <!-- <br/>
+    <label>vX: <output id="vx"></output></label>
+    <br/>
+    <label>vY: <output id="vy"></output></label>
+    <br/>
+    <label>vZ: <output id="vz"></output></label>
+    <br/> -->
+    <!-- <svg>
+      <path d="" fill="none" stroke="black"/>
+    </svg> -->
+  </main>
+  <script>
+    //https://stackoverflow.com/questions/3377288/how-to-remove-gravity-factor-from-accelerometer-readings-in-android-3-axis-accel
+    //https://en.wikiversity.org/wiki/PlanetPhysics/Direction_Cosine_Matrix
+    const x = document.getElementById("x");
+    const y = document.getElementById("y");
+    const z = document.getElementById("z");
+
+    // const angularAcceleration   = { x: 0, y: 0, z: 0 };
+    // const angularVelocity       = { x: 0, y: 0, z: 0 };
+    // const angularDisplacement   = { x: 0, y: 0, z: 0 };
+    const acceleration          = { x: 0, y: 0, z: 0 };
+    // const velocity              = { x: 0, y: 0, z: 0 };
+    // const displacement          = { x: 0, y: 0, z: 0 };
+
+    document.getElementById("start").addEventListener("click", async ev => {
+      ev.target.remove();
+
+      await DeviceOrientationEvent.requestPermission?.();
+
+      // let t0 = performance.now();
+      // let count = 0;
+      // let drift = { x: 0, y: 0, z: 0 };
+
+      window.addEventListener("devicemotion", ev => {
+        const delta = ev.interval;
+
+        // angularDisplacement =
+        // displacement.x += delta * velocity.x;
+        // displacement.y += delta * velocity.y;
+        // displacement.z += delta * velocity.z;
+
+        drift.x = 0.9 * drift.x + 0.1 * ev.acceleration.x;
+        drift.y = 0.9 * drift.y + 0.1 * ev.acceleration.y;
+        drift.z = 0.9 * drift.z + 0.1 * ev.acceleration.z;
+
+        x.value = drift.x.toFixed(3);
+        y.value = drift.y.toFixed(3);
+        z.value = drift.z.toFixed(3);
+        // vx.value = velocity.x;
+        // vy.value = velocity.y;
+        // vz.value = velocity.z;
+
+        // velocity.x += delta * acceleration.x;
+        // velocity.y += delta * acceleration.y;
+        // velocity.z += delta * acceleration.z;
+
+        // acceleration.x = ev.acceleration.x;
+        // acceleration.y = ev.acceleration.y;
+        // acceleration.z = ev.acceleration.z;
+      });
+    });
+  </script>
+</body>
+</html>
