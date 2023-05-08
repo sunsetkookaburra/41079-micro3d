@@ -10,74 +10,99 @@
     <h1>Accelerometer</h1>
   </header>
   <main>
+    <!-- <p>Once you start calibration, please do not bump or move the device until completion.</p> -->
     <button id="start">Start</button>
-    <br/>
-    <label>X: <output id="x"></output></label>
-    <br/>
-    <label>Y: <output id="y"></output></label>
-    <br/>
-    <label>Z: <output id="z"></output></label>
-    <!-- <br/>
-    <label>vX: <output id="vx"></output></label>
-    <br/>
-    <label>vY: <output id="vy"></output></label>
-    <br/>
-    <label>vZ: <output id="vz"></output></label>
-    <br/> -->
-    <!-- <svg>
-      <path d="" fill="none" stroke="black"/>
-    </svg> -->
   </main>
   <script>
-    //https://stackoverflow.com/questions/3377288/how-to-remove-gravity-factor-from-accelerometer-readings-in-android-3-axis-accel
-    //https://en.wikiversity.org/wiki/PlanetPhysics/Direction_Cosine_Matrix
-    const x = document.getElementById("x");
-    const y = document.getElementById("y");
-    const z = document.getElementById("z");
+    const DURATION = 30;
+    const start = document.getElementById("start");
+    // start.innerText += ` (${DURATION}s)`;
 
-    // const angularAcceleration   = { x: 0, y: 0, z: 0 };
-    // const angularVelocity       = { x: 0, y: 0, z: 0 };
-    // const angularDisplacement   = { x: 0, y: 0, z: 0 };
-    const acceleration          = { x: 0, y: 0, z: 0 };
-    // const velocity              = { x: 0, y: 0, z: 0 };
-    // const displacement          = { x: 0, y: 0, z: 0 };
-
-    document.getElementById("start").addEventListener("click", async ev => {
+    start.addEventListener("click", async ev => {
       ev.target.remove();
+      const main = document.getElementsByTagName("main")[0];
+      // main.insertAdjacentHTML("beforeend", `<p>Collecting samples for ${DURATION} seconds...</p>`);
+      const information = document.createElement("p");
+      information.style.fontFamily = "monospace";
+      main.insertAdjacentElement("beforeend", information);
 
-      await DeviceOrientationEvent.requestPermission?.();
+      if ('requestPermission' in DeviceMotionEvent && await DeviceMotionEvent.requestPermission() !== "granted") {
+        information.innerText = "Permissions not allowed for capturing device accelerometer data.";
+        return;
+      }
 
-      // let t0 = performance.now();
-      // let count = 0;
-      // let drift = { x: 0, y: 0, z: 0 };
+      // const samples = { x: [], y: [], z: [] };
+      const controller = new AbortController();
+
+      // controller.signal.addEventListener("abort", () => {
+      //   samples.x.sort();
+      //   samples.y.sort();
+      //   samples.z.sort();
+      //   information.innerText += `\n\
+      //     X-bias = ${samples.x.reduce((acc, val) => acc + val, 0) / samples.x.length}\n\
+      //     Y-bias = ${samples.y.reduce((acc, val) => acc + val, 0) / samples.y.length}\n\
+      //     Z-bias = ${samples.z.reduce((acc, val) => acc + val, 0) / samples.z.length}\n\n\
+      //     X-med = ${samples.x[Math.trunc(samples.x.length/2)]}\n\
+      //     Y-med = ${samples.y[Math.trunc(samples.y.length/2)]}\n\
+      //     Z-med = ${samples.z[Math.trunc(samples.z.length/2)]}\
+      //   `;
+      // });
+
+      let bias = 0;
+
+      const mean = { x: 0, y: 0, z: 0 };
 
       window.addEventListener("devicemotion", ev => {
-        const delta = ev.interval;
+        information.innerText = "";
+        // information.innerText = "Collected " + samples.x.length + " samples.";
 
-        // angularDisplacement =
-        // displacement.x += delta * velocity.x;
-        // displacement.y += delta * velocity.y;
-        // displacement.z += delta * velocity.z;
+        const gravityMagnitude = Math.sqrt(
+          + (ev.accelerationIncludingGravity.x ** 2)
+          + (ev.accelerationIncludingGravity.y ** 2)
+          + (ev.accelerationIncludingGravity.z ** 2)
+        );
+        const gravity = {
+          x: ev.accelerationIncludingGravity.x / gravityMagnitude,
+          y: ev.accelerationIncludingGravity.y / gravityMagnitude,
+          z: ev.accelerationIncludingGravity.z / gravityMagnitude,
+        };
 
-        drift.x = 0.9 * drift.x + 0.1 * ev.acceleration.x;
-        drift.y = 0.9 * drift.y + 0.1 * ev.acceleration.y;
-        drift.z = 0.9 * drift.z + 0.1 * ev.acceleration.z;
+        const verticalAcceleration = (
+          + gravity.x * ev.acceleration.x
+          + gravity.y * ev.acceleration.y
+          + gravity.z * ev.acceleration.z
+        );
 
-        x.value = drift.x.toFixed(3);
-        y.value = drift.y.toFixed(3);
-        z.value = drift.z.toFixed(3);
-        // vx.value = velocity.x;
-        // vy.value = velocity.y;
-        // vz.value = velocity.z;
+        const delta = verticalAcceleration - bias;
+        if (Math.abs(delta) < 0.1) bias += 0.01 * delta;
 
-        // velocity.x += delta * acceleration.x;
-        // velocity.y += delta * acceleration.y;
-        // velocity.z += delta * acceleration.z;
+        const acc = {
+          x: ev.acceleration.x - bias * gravity.x,
+          y: ev.acceleration.y - bias * gravity.y,
+          z: ev.acceleration.z - bias * gravity.z,
+        };
 
-        // acceleration.x = ev.acceleration.x;
-        // acceleration.y = ev.acceleration.y;
-        // acceleration.z = ev.acceleration.z;
-      });
+
+        mean.x = 0.9 * mean.x + 0.1 * acc.x;
+        mean.y = 0.9 * mean.y + 0.1 * acc.y;
+        mean.z = 0.9 * mean.z + 0.1 * acc.z;
+
+        information.innerText += `\naX${mean.x.toFixed(2).padStart(5, " ")}`;
+        information.innerText += `\naY${mean.y.toFixed(2).padStart(5, " ")}`;
+        information.innerText += `\naZ${mean.z.toFixed(2).padStart(5, " ")}`;
+        // const acc = Math.sqrt(
+        //   + (ev.accelerationIncludingGravity.x ** 2)
+        //   + (ev.accelerationIncludingGravity.y ** 2)
+        //   + (ev.accelerationIncludingGravity.z ** 2)
+        // );
+        // mean = 0.9 * mean + 0.1 * acc;
+        // information.innerText += `\n${mean}`;
+        // samples.x.push(ev.acceleration.x);
+        // samples.y.push(ev.acceleration.y);
+        // samples.z.push(ev.acceleration.z);
+      }, { signal: controller.signal });
+
+      // setTimeout(() => { controller.abort(); }, DURATION * 1000);
     });
   </script>
 </body>
