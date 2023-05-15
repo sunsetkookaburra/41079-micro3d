@@ -3,16 +3,23 @@ export function extractEXIF(imageBuffer) {
   const width = exifTags["Image Width"]["value"];
   const height = exifTags["Image Height"]["value"];
   const focal35mm = exifTags["FocalLengthIn35mmFilm"]["value"];
-  const lat = dmsToDec(exifTags["GPSLatitude"]["value"].map(fractional)) * (exifTags["GPSLatitudeRef"]["value"][0] == "N" ? 1 : -1);
-  const lon = dmsToDec(exifTags["GPSLongitude"]["value"].map(fractional)) * (exifTags["GPSLongitudeRef"]["value"][0] == "E" ? 1 : -1);
-  const elevation = fractional(exifTags["GPSAltitude"]["value"]) * (exifTags["GPSAltitudeRef"]["value"] == 0 ? 1 : -1);
+  const lat = dmsToDec(exifTags["GPSLatitude"]["value"].map(fractional)) *
+    (exifTags["GPSLatitudeRef"]["value"][0] == "N" ? 1 : -1);
+  const lon = dmsToDec(exifTags["GPSLongitude"]["value"].map(fractional)) *
+    (exifTags["GPSLongitudeRef"]["value"][0] == "E" ? 1 : -1);
+  const elevation = fractional(exifTags["GPSAltitude"]["value"]) *
+    (exifTags["GPSAltitudeRef"]["value"] == 0 ? 1 : -1);
   const heading = fractional(exifTags["GPSImgDirection"]["value"]);
   const gps_error = fractional(exifTags["GPSHPositioningError"]["value"]);
   const timestamp = new Date(
-    exifTags["DateTimeOriginal"]["value"][0].split(" ")[0].replaceAll(":", "-") + "T" +
-    exifTags["DateTimeOriginal"]["value"][0].split(" ")[1] +
-    (exifTags["SubSecTimeOriginal"] && "."+exifTags["SubSecTimeOriginal"]["value"] || "") +
-    exifTags["OffsetTimeOriginal"]["value"]
+    exifTags["DateTimeOriginal"]["value"][0].split(" ")[0].replaceAll(
+      ":",
+      "-",
+    ) + "T" +
+      exifTags["DateTimeOriginal"]["value"][0].split(" ")[1] +
+      (exifTags["SubSecTimeOriginal"] &&
+          "." + exifTags["SubSecTimeOriginal"]["value"] || "") +
+      exifTags["OffsetTimeOriginal"]["value"],
   ).valueOf();
 
   let hfov = 2 * Math.atan2(36, 2 * focal35mm);
@@ -58,9 +65,9 @@ export function correlateDistances(capture) {
         groupedFeatures.set(feature_id, []);
       }
       const angles = angleTo(
-        { x: bbox[0] + bbox[2] / 2, y: bbox[1] + bbox[3] / 2},
-        { x: bbox[0], y: bbox[1]},
-        { x: frame.metadata.fov[0], y: frame.metadata.fov[1] }
+        { x: bbox[0] + bbox[2] / 2, y: bbox[1] + bbox[3] / 2 },
+        { x: bbox[0], y: bbox[1] },
+        { x: frame.metadata.fov[0], y: frame.metadata.fov[1] },
       );
       groupedFeatures.get(feature_id).push({
         frame_id,
@@ -75,7 +82,9 @@ export function correlateDistances(capture) {
     if (group.length <= 1) groupedFeatures.delete(feature_id);
   }
 
-  if (groupedFeatures.size == 0) throw new Error("Not enough frames to correlate");
+  if (groupedFeatures.size == 0) {
+    throw new Error("Not enough frames to correlate");
+  }
 
   const featureGraphs = [];
   for (const [feature_id, group] of groupedFeatures) {
@@ -93,9 +102,13 @@ export function correlateDistances(capture) {
         const jRatio = group[jId];
         // Maybe TODO: calulate heading to each point/frame
         graph[`${iId}:${jId}`] = Math.sqrt(
-          iRatio ** 2
-          + jRatio ** 2
-          - 2 * iRatio * jRatio * Math.cos(bearingAcuteAngle(group[i].heading, group[j].heading) * Math.PI / 180)
+          iRatio ** 2 +
+            jRatio ** 2 -
+            2 * iRatio * jRatio *
+              Math.cos(
+                bearingAcuteAngle(group[i].heading, group[j].heading) *
+                  Math.PI / 180,
+              ),
         );
       }
     }
@@ -119,7 +132,6 @@ export function correlateDistances(capture) {
     }
     if (!found) throw new Error("Disconnected graph on feature " + feature_id);
   }
-
 
   // Now construct graphs into coordinates
   const featureCoords = {};
@@ -156,10 +168,10 @@ export function correlateDistances(capture) {
   let numFrames = Object.keys(capture["frames"]).length;
   const coords = {};
   for (let i = 0; i < numFrames; ++i) {
-    coords[i] = [0,0,0];
+    coords[i] = [0, 0, 0];
   }
-  for (const {feature_id, graph} in featureCoords) {
-    for (const {frame_id, graphCoords} in graph) {
+  for (const { feature_id, graph } in featureCoords) {
+    for (const { frame_id, graphCoords } in graph) {
       coords[frame_id][0] += graphCoords[0];
       coords[frame_id][1] += graphCoords[1];
       coords[frame_id][2]++;
@@ -168,31 +180,32 @@ export function correlateDistances(capture) {
 
   finalFrameCoords = {};
   for (let i = 0; i < numFrames; ++i) {
-    finalFrameCoords[i] = [coords[i][0]/coords[i][2], coords[i][1]/coords[i][2]];
+    finalFrameCoords[i] = [
+      coords[i][0] / coords[i][2],
+      coords[i][1] / coords[i][2],
+    ];
   }
-   
+
   for (let i = 0; i < featureGraphs.length; ++i) {
-    coords[i] = [0,0,0];
+    coords[i] = [0, 0, 0];
   }
   for (const { feature_id, graph } of featureGraphs) {
-
     for (const { frame_id, heading } of groupedFeatures.get(feature_id)) {
       const ratio = graph[frame_id];
       const vector = navigate(ratio, heading);
-      coords[feature_id][0] += finalFrameCoords[frame_id][0]+vector[0]
-      coords[feature_id][1] += finalFrameCoords[frame_id][1]+vector[1]
+      coords[feature_id][0] += finalFrameCoords[frame_id][0] + vector[0];
+      coords[feature_id][1] += finalFrameCoords[frame_id][1] + vector[1];
       coords[feature_id][2]++;
     }
   }
 
   finalFeatureCoords = {};
   for (let i = 0; i < featureGraphs.length; ++i) {
-    finalFrameCoords[i] = [coords[i][0]/coords[i][2], coords[i][1]/coords[i][2]];
+    finalFrameCoords[i] = [
+      coords[i][0] / coords[i][2],
+      coords[i][1] / coords[i][2],
+    ];
   }
-
-
-
-  
 
   // // ratio of feature distance relative to average size (sum of all non-feature edges) of graph
   // // [feature_id] => { [frame_id] => ratio }
