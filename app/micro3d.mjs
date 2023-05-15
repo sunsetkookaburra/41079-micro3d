@@ -120,19 +120,25 @@ export function correlateDistances(capture) {
     if (!found) throw new Error("Disconnected graph on feature " + feature_id);
   }
 
+
   // Now construct graphs into coordinates
   const featureCoords = {};
-  const featureFrameNavigate = new Map();
+  //const frame2feature = {};
+  //for (let i = 0; i < featureGraphs.length; ++i) {
+  //  frame2feature[i] = {};
+  //}
+  //const featureFrameNavigate = new Map();
   for (const { feature_id, graph } of featureGraphs) {
     const coords = {};
     let x = 0, y = 0, n = 0;
     for (const { frame_id, heading } of groupedFeatures.get(feature_id)) {
       const ratio = graph[frame_id];
       const coord = navigate(ratio, (heading + 180) % 360);
-      if (!featureFrameNavigate.has(feature_id)) {
-        featureFrameNavigate.set(feature_id, []);
-      }
-      featureFrameNavigate.push({})
+      //frame2feature[frame_id][feature_id] = {ratio, heading};
+      //if (!featureFrameNavigate.has(feature_id)) {
+      //   featureFrameNavigate.set(feature_id, []);
+      //}
+      //featureFrameNavigate.push({})
       x += coord[0];
       y += coord[1];
       ++n;
@@ -146,6 +152,47 @@ export function correlateDistances(capture) {
 
     featureCoords[feature_id] = coords;
   }
+
+  let numFrames = Object.keys(capture["frames"]).length;
+  const coords = {};
+  for (let i = 0; i < numFrames; ++i) {
+    coords[i] = [0,0,0];
+  }
+  for (const {feature_id, graph} in featureCoords) {
+    for (const {frame_id, graphCoords} in graph) {
+      coords[frame_id][0] += graphCoords[0];
+      coords[frame_id][1] += graphCoords[1];
+      coords[frame_id][2]++;
+    }
+  }
+
+  finalFrameCoords = {};
+  for (let i = 0; i < numFrames; ++i) {
+    finalFrameCoords[i] = [coords[i][0]/coords[i][2], coords[i][1]/coords[i][2]];
+  }
+   
+  for (let i = 0; i < featureGraphs.length; ++i) {
+    coords[i] = [0,0,0];
+  }
+  for (const { feature_id, graph } of featureGraphs) {
+
+    for (const { frame_id, heading } of groupedFeatures.get(feature_id)) {
+      const ratio = graph[frame_id];
+      const vector = navigate(ratio, heading);
+      coords[feature_id][0] += finalFrameCoords[frame_id][0]+vector[0]
+      coords[feature_id][1] += finalFrameCoords[frame_id][1]+vector[1]
+      coords[feature_id][2]++;
+    }
+  }
+
+  finalFeatureCoords = {};
+  for (let i = 0; i < featureGraphs.length; ++i) {
+    finalFrameCoords[i] = [coords[i][0]/coords[i][2], coords[i][1]/coords[i][2]];
+  }
+
+
+
+  
 
   // // ratio of feature distance relative to average size (sum of all non-feature edges) of graph
   // // [feature_id] => { [frame_id] => ratio }
