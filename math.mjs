@@ -10,7 +10,7 @@ class Capture {
   }
 }
 
-const CAPTURE = {
+export const CAPTURE = {
   "frames": {
     0: {
       "width": 4032,
@@ -24,7 +24,7 @@ const CAPTURE = {
       "metadata": {
         "fov": [69.4, 52.05],
         "heading": 181.0156632,
-        "latlon": [],
+        "latlon": [-33.883153, 151.200911],
         "elevation": 0.0,
         "timestamp": new Date("2023/04/22 16:44:27.897+10:00").valueOf(),
       }
@@ -41,6 +41,7 @@ const CAPTURE = {
       "metadata": {
         "fov": [69.4, 52.05],
         "heading": 133.1238785,
+        "latlon": [-33.883097, 151.200822],
         "timestamp": new Date("2023/04/22 16:44:42.486+10:00").valueOf(),
       }
     },
@@ -56,6 +57,7 @@ const CAPTURE = {
       "metadata": {
         "fov": [69.4, 52.05],
         "heading": 265.9196625,
+        "latlon": [-33.883041, 151.200731],
         "timestamp": new Date("2023/04/22 16:44:56.974+10:00").valueOf(),
       }
     },
@@ -71,6 +73,7 @@ const CAPTURE = {
       "metadata": {
         "fov": [69.4, 52.05],
         "heading": 324.5359498,
+        "latlon": [-33.883022, 151.200775],
         "timestamp": new Date("2023/04/22 16:45:10.275+10:00").valueOf(),
       }
     },
@@ -85,6 +88,7 @@ const CAPTURE = {
       "metadata": {
         "fov": [69.4, 52.05],
         "heading": 22.92895508,
+        "latlon": [-33.883061, 151.200822],
         "timestamp": new Date("2023/04/22 16:45:22.805+10:00").valueOf(),
       }
     }
@@ -237,20 +241,22 @@ function correlateDistances(capture) {
   console.log(relativeDistanceGraph(mostSeenList));
 }
 
-const orientation = JSON.parse(Deno.readTextFileSync("alumnigardenrectify.json"))["orientation"];
-for (const [id, frame] of Object.entries(CAPTURE.frames)) {
-  let heading;
-  for (const [t, x, y, z] of orientation) {
-    if (t > frame.metadata.timestamp) {
-      heading = (360 - z / Math.PI * 180) % 360
-      break;
-    };
+if ('Deno' in globalThis) {
+  const orientation = JSON.parse(globalThis.Deno.readTextFileSync("alumnigardenrectify.json"))["orientation"];
+  for (const [id, frame] of Object.entries(CAPTURE.frames)) {
+    let heading;
+    for (const [t, x, y, z] of orientation) {
+      if (t > frame.metadata.timestamp) {
+        heading = (360 - z / Math.PI * 180) % 360
+        break;
+      };
+    }
+    frame.metadata.heading = heading || 0;
   }
-  frame.metadata.heading = heading || 0;
-}
 
-console.log(CAPTURE);
-correlateDistances(CAPTURE);
+  console.log(CAPTURE);
+  correlateDistances(CAPTURE);
+}
 
 // console.log(relativeDistanceGraph([
 //   { frame_id: "0", feature_scale: 1, feature_heading: 45 },
@@ -259,45 +265,45 @@ correlateDistances(CAPTURE);
 //   { frame_id: "3", feature_scale: 1, feature_heading: 315 },
 // ]))
 
-// function dmsToDec([deg, min, sec]) {
-//   return deg + min / 60 + sec / 3600;
-// }
+function dmsToDec([deg, min, sec]) {
+  return deg + min / 60 + sec / 3600;
+}
 
-// function fractional([numerator, denominator]) {
-//   return numerator / denominator;
-// }
+function fractional([numerator, denominator]) {
+  return numerator / denominator;
+}
 
-// export function captureParameters(exifTags) {
-//   const width = exifTags["Image Width"]["value"];
-//   const height = exifTags["Image Height"]["value"];
-//   const focal35mm = exifTags["FocalLengthIn35mmFilm"]["value"];
-//   const lat = dmsToDec(exifTags["GPSLatitude"]["value"].map(fractional)) * (exifTags["GPSLatitudeRef"]["value"][0] == "N" ? 1 : -1);
-//   const lon = dmsToDec(exifTags["GPSLongitude"]["value"].map(fractional)) * (exifTags["GPSLongitudeRef"]["value"][0] == "E" ? 1 : -1);
-//   const ele = fractional(exifTags["GPSAltitude"]["value"]) * (exifTags["GPSAltitudeRef"]["value"] == 0 ? 1 : -1);
-//   const head = fractional(exifTags["GPSImgDirection"]["value"]);
-//   const err = fractional(exifTags["GPSHPositioningError"]["value"]);
-//   const time = new Date(
-//     exifTags["DateTimeOriginal"]["value"][0].split(" ")[0].replaceAll(":", "-") + "T" +
-//     exifTags["DateTimeOriginal"]["value"][0].split(" ")[1] +
-//     (exifTags["SubSecTimeOriginal"] && "."+exifTags["SubSecTimeOriginal"]["value"] || "") +
-//     exifTags["OffsetTimeOriginal"]["value"]
-//   );
+export function captureParameters(exifTags) {
+  const width = exifTags["Image Width"]["value"];
+  const height = exifTags["Image Height"]["value"];
+  const focal35mm = exifTags["FocalLengthIn35mmFilm"]["value"];
+  const lat = dmsToDec(exifTags["GPSLatitude"]["value"].map(fractional)) * (exifTags["GPSLatitudeRef"]["value"][0] == "N" ? 1 : -1);
+  const lon = dmsToDec(exifTags["GPSLongitude"]["value"].map(fractional)) * (exifTags["GPSLongitudeRef"]["value"][0] == "E" ? 1 : -1);
+  const ele = fractional(exifTags["GPSAltitude"]["value"]) * (exifTags["GPSAltitudeRef"]["value"] == 0 ? 1 : -1);
+  const head = fractional(exifTags["GPSImgDirection"]["value"]);
+  const err = fractional(exifTags["GPSHPositioningError"]["value"]);
+  const time = new Date(
+    exifTags["DateTimeOriginal"]["value"][0].split(" ")[0].replaceAll(":", "-") + "T" +
+    exifTags["DateTimeOriginal"]["value"][0].split(" ")[1] +
+    (exifTags["SubSecTimeOriginal"] && "."+exifTags["SubSecTimeOriginal"]["value"] || "") +
+    exifTags["OffsetTimeOriginal"]["value"]
+  );
 
-//   let hfov = 2 * Math.atan2(36, 2 * focal35mm);
-//   let vfov = 2 * Math.atan2(24, 2 * focal35mm);
+  let hfov = 2 * Math.atan2(36, 2 * focal35mm);
+  let vfov = 2 * Math.atan2(24, 2 * focal35mm);
 
-//   // TODO: Adjust for sensor crop with image vs 35mm ratio
+  // TODO: Adjust for sensor crop with image vs 35mm ratio
 
-//   // hfov *= 180 / Math.PI;
-//   // vfov *= 180 / Math.PI;
+  // hfov *= 180 / Math.PI;
+  // vfov *= 180 / Math.PI;
 
-//   return {
-//     frame: { x: width, y: height },
-//     fov: { x: hfov, y: vfov },
-//     nav: { lat, lon, ele, head, err },
-//     time,
-//   };
-// }
+  return {
+    frame: { x: width, y: height },
+    fov: { x: hfov, y: vfov },
+    nav: { lat, lon, ele, head, err },
+    time,
+  };
+}
 
 /** Angle to point, +X Right, +Y Up (cartesian) */
 export function angleTo(point, frame, fov) {
