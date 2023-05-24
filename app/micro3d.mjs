@@ -22,8 +22,9 @@ export function extractEXIF(imageBuffer) {
       exifTags["OffsetTimeOriginal"]["value"],
   ).valueOf();
 
+  // Unsure about how to change 36 for non 3:2 images
   let hfov = 2 * Math.atan2(36, 2 * focal35mm);
-  let vfov = 2 * Math.atan2(24, 2 * focal35mm);
+  let vfov = 2 * Math.atan2((height / width) * 36, 2 * focal35mm); // 24mm in 3:2
 
   // TODO: Adjust for sensor crop with image vs 35mm ratio / orientation
 
