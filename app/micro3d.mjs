@@ -1,3 +1,5 @@
+import {angleTo,bearingAcuteAngle} from "../math.mjs";
+
 export function extractEXIF(imageBuffer) {
   const exifTags = ExifReader.load(imageBuffer);
   const width = exifTags["Image Width"]["value"];
@@ -86,36 +88,35 @@ export function correlateDistances(capture) {
   if (groupedFeatures.size == 0) {
     throw new Error("Not enough frames to correlate");
   }
-
   const featureGraphs = [];
   for (const [feature_id, group] of groupedFeatures) {
     const graph = {};
     // relative distances from frames to feature
-    for (let i = 1; i < group.length; ++i) {
+    //return [feature_id, group]
+    for (let i = 0; i < group.length; ++i) {
       graph[group[i].frame_id] = group[0].scale / group[i].scale;
     }
-    // relative distances between frames
-    for (let i = 0; i < group.length; ++i) {
-      for (let j = i + 1; j < group.length; ++j) {
-        const iId = group[i].frame_id;
-        const jId = group[j].frame_id;
-        const iRatio = graph[iId];
-        const jRatio = group[jId];
-        // Maybe TODO: calulate heading to each point/frame
-        graph[`${iId}:${jId}`] = Math.sqrt(
-          iRatio ** 2 +
-            jRatio ** 2 -
-            2 * iRatio * jRatio *
-              Math.cos(
-                bearingAcuteAngle(group[i].heading, group[j].heading) *
-                  Math.PI / 180,
-              ),
-        );
-      }
-    }
+    // relative distances between frames ------ Dont think this is needed -Keegan
+    // for (let i = 0; i < group.length; ++i) {
+    //   for (let j = i + 1; j < group.length; ++j) {
+    //     const iId = group[i].frame_id;
+    //     const jId = group[j].frame_id;
+    //     const iRatio = graph[iId];
+    //     const jRatio = graph[jId];
+    //     // Maybe TODO: calulate heading to each point/frame
+    //     graph[`${iId}:${jId}`] = Math.sqrt(
+    //       iRatio ** 2 +
+    //         jRatio ** 2 -
+    //         2 * iRatio * jRatio *
+    //           Math.cos(
+    //             bearingAcuteAngle(group[i].heading, group[j].heading) *
+    //               Math.PI / 180,
+    //           ),
+    //     );
+    //   }
+    // }
     featureGraphs.push({ feature_id, graph });
   }
-
   // normalise ratios across all features
   for (let i = 1; i < featureGraphs.length; ++i) {
     const { feature_id, graph } = featureGraphs[i];
@@ -136,10 +137,6 @@ export function correlateDistances(capture) {
 
   // Now construct graphs into coordinates
   const featureCoords = {};
-  //const frame2feature = {};
-  //for (let i = 0; i < featureGraphs.length; ++i) {
-  //  frame2feature[i] = {};
-  //}
   //const featureFrameNavigate = new Map();
   for (const { feature_id, graph } of featureGraphs) {
     const coords = {};
@@ -152,61 +149,67 @@ export function correlateDistances(capture) {
       //   featureFrameNavigate.set(feature_id, []);
       //}
       //featureFrameNavigate.push({})
+      coords[frame_id] = coord;
       x += coord[0];
       y += coord[1];
       ++n;
     }
     // recenter on centroid
     const center = [x / n, y / n];
+    // console.log(feature_id)
+    // console.log(center)
+    // console.log()
     for (const frame_id in coords) {
       coords[frame_id][0] -= center[0];
       coords[frame_id][1] -= center[1];
     }
-
     featureCoords[feature_id] = coords;
   }
-
+  console.log(featureCoords)
   let numFrames = Object.keys(capture["frames"]).length;
-  const coords = {};
+  const framecoords = {};
   for (let i = 0; i < numFrames; ++i) {
-    coords[i] = [0, 0, 0];
+    framecoords[i] = [0, 0, 0];
   }
-  for (const { feature_id, graph } in featureCoords) {
-    for (const { frame_id, graphCoords } in graph) {
-      coords[frame_id][0] += graphCoords[0];
-      coords[frame_id][1] += graphCoords[1];
-      coords[frame_id][2]++;
+  //return coords
+  for (var feature_id in featureCoords) {
+    for (var frame_id in featureCoords[feature_id]) {
+      framecoords[frame_id][0] += featureCoords[feature_id][frame_id][0];
+      framecoords[frame_id][1] += featureCoords[feature_id][frame_id][1];
+      framecoords[frame_id][2]++;
     }
   }
-
-  finalFrameCoords = {};
+  const finalFrameCoords = {};
   for (let i = 0; i < numFrames; ++i) {
     finalFrameCoords[i] = [
-      coords[i][0] / coords[i][2],
-      coords[i][1] / coords[i][2],
+      framecoords[i][0] / framecoords[i][2],
+      framecoords[i][1] / framecoords[i][2],
     ];
   }
 
+  const featurecoords = {};
   for (let i = 0; i < featureGraphs.length; ++i) {
-    coords[i] = [0, 0, 0];
+    featurecoords[i] = [0, 0, 0];
   }
   for (const { feature_id, graph } of featureGraphs) {
     for (const { frame_id, heading } of groupedFeatures.get(feature_id)) {
       const ratio = graph[frame_id];
       const vector = navigate(ratio, heading);
-      coords[feature_id][0] += finalFrameCoords[frame_id][0] + vector[0];
-      coords[feature_id][1] += finalFrameCoords[frame_id][1] + vector[1];
-      coords[feature_id][2]++;
+      featurecoords[feature_id][0] += finalFrameCoords[frame_id][0] + vector[0];
+      featurecoords[feature_id][1] += finalFrameCoords[frame_id][1] + vector[1];
+      featurecoords[feature_id][2]++;
     }
   }
-
-  finalFeatureCoords = {};
+  const finalFeatureCoords = {};
   for (let i = 0; i < featureGraphs.length; ++i) {
-    finalFrameCoords[i] = [
-      coords[i][0] / coords[i][2],
-      coords[i][1] / coords[i][2],
+    finalFeatureCoords[i] = [
+      featurecoords[i][0] / featurecoords[i][2],
+      featurecoords[i][1] / featurecoords[i][2],
     ];
   }
+
+  return [finalFrameCoords,finalFeatureCoords]
+
 
   // // ratio of feature distance relative to average size (sum of all non-feature edges) of graph
   // // [feature_id] => { [frame_id] => ratio }

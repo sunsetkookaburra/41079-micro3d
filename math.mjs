@@ -134,7 +134,7 @@ export const CAPTURE = {
 //   }
 // }
 
-function bearingAcuteAngle(a, b) {
+export function bearingAcuteAngle(a, b) {
   const dif = Math.abs(a - b);
   return dif > 180 ? 360 - dif : dif;
 }
@@ -308,8 +308,8 @@ export function captureParameters(exifTags) {
 /** Angle to point, +X Right, +Y Up (cartesian) */
 export function angleTo(point, frame, fov) {
   return {
-    x: point.x / frame.x * fov.x - fov.x / 2,
-    y: -(point.y / frame.y * fov.y - fov.y / 2),
+    x: point.x / (frame.x+0.01) * fov.x - fov.x / 2,
+    y: -(point.y / (frame.y+0.01) * fov.y - fov.y / 2),
   };
 }
 
