@@ -53,7 +53,7 @@ function navigate(distance, heading) {
 }
 
 function moveGraph(graph, vec) {
-  
+
 }
 
 // frames need to calculate bearing from centroid
@@ -143,7 +143,7 @@ export function correlateDistances(capture) {
           }
         }
         if (factors.length!=0) {
-          
+
           var avgfactor = 0;
           for (var i in factors) {
             avgfactor += factors[i];
@@ -192,7 +192,7 @@ export function correlateDistances(capture) {
   }
   console.log(featureGraphs)*/
 
-  
+
   /*let numFrames = Object.keys(capture["frames"]).length;
   const adjList = {};
   for (let i = 0; i < numFrames; ++i) {
@@ -218,7 +218,7 @@ export function correlateDistances(capture) {
   while (queue.length>0) {
     for (var frame_id in adjList[queue.shift()]) {
       console.log(frame_id)
-      for 
+      for
     }
   }*/
 
@@ -248,8 +248,8 @@ export function correlateDistances(capture) {
     // featureCoords[feature_id] = coords;
   }
 
-  
-
+  // console.log(featureCoords)
+  // let numFrames = Object.keys(capture["frames"]).length;
   const framecoords = {};
   for (var frame_id in featureCoords[0]) {
     framecoords[frame_id] = featureCoords[0][frame_id];

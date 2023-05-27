@@ -4,7 +4,7 @@ class TestingRig {
   FEATURE_ID = 0;
   FEATURES = [];
 
-  constructor(elementOrId, onUpdate = () => {}) {
+  constructor(elementOrId, onUpdate = (_capture) => {}) {
     this.ON_UPDATE = onUpdate;
     this.ROOT = typeof elementOrId == "string" ? document.getElementById(elementOrId) : elementOrId;
     this.ROOT.insertAdjacentHTML(
@@ -13,6 +13,7 @@ class TestingRig {
         <legend>Testing Rig</legend>
         <button>📸 Add Camera 📸</button>
         <button>🪴 Add Feature 🪴</button>
+        <button>🗑️ Clear All 🗑️</button>
         |
         <label>FOV:</label>
         <input type="number"/>
@@ -28,14 +29,20 @@ class TestingRig {
       ));
     // Add Camera
     this.ROOT.querySelector("button:nth-of-type(1)").addEventListener("click", () => {
-      this.addCamera(this.MAP.getCenter());
-      this.ON_UPDATE();
+      this.addCamera(this.MAP.getCenter(), { fov: this.ROOT.querySelector("input").value || 69.4 });
+      this.ON_UPDATE(this.createCapture());
     });
     // Add Feature
     this.ROOT.querySelector("button:nth-of-type(2)").addEventListener("click", () => {
       this.addFeature(this.MAP.getCenter());
-      this.ON_UPDATE();
+      this.ON_UPDATE(this.createCapture());
     });
+    // Clear All
+    this.ROOT.querySelector("button:nth-of-type(3)").addEventListener("click", () => {
+      this.clear();
+    });
+    // Initial Event
+    this.ON_UPDATE(this.createCapture());
   }
 
   wgs84Inverse({from, to}) {
@@ -94,14 +101,14 @@ class TestingRig {
       else { node.addTo(group); }
     });
     const updateEditNode = (ev) => {
-      this.ON_UPDATE();
+      this.ON_UPDATE(this.createCapture());
       heading = this.wgs84Inverse({ from: marker.getLatLng(), to: ev.latlng }).bearing;
       node.setLatLng(this.wgs84Navigate({ from: marker.getLatLng(), heading, distance }));
       area.setLatLngs(this.fovBounds({ from: marker.getLatLng(), fov, heading, distance: distance / Math.cos((fov * Math.PI / 180) / 2) }));
     };
     node.on("drag", updateEditNode);
     marker.on("drag", ev => {
-      this.ON_UPDATE();
+      this.ON_UPDATE(this.createCapture());
       node.setLatLng(this.wgs84Navigate({ from: ev.latlng, heading, distance }));
       area.setLatLngs(this.fovBounds({ from: ev.latlng, fov, heading, distance: distance / Math.cos((fov * Math.PI / 180) / 2) }));
     });
@@ -118,8 +125,10 @@ class TestingRig {
       fov,
       getLatLon: () => marker.getLatLng(),
       getHeading: () => heading,
+      _layer: group,
     };
     this.CAMERAS.push(camera);
+    this.ON_UPDATE(this.createCapture());
     return camera;
   }
 
@@ -127,7 +136,7 @@ class TestingRig {
     const latlng = L.latLng(coords);
     const marker = L.marker(latlng, { draggable: true, riseOnHover: true, icon: new L.Icon.Default({ className: "obj" }) }).addTo(this.MAP);
     marker.on("drag", () => {
-      this.ON_UPDATE();
+      this.ON_UPDATE(this.createCapture());
     });
     marker.bindTooltip(`id:${this.FEATURE_ID} | ${JSON.stringify(tags)}`);
     marker.bindPopup(() => {
@@ -139,8 +148,11 @@ class TestingRig {
     const feature = {
       id: this.FEATURE_ID++,
       getLatLon: () => marker.getLatLng(),
+      tags,
+      _layer: marker,
     };
     this.FEATURES.push(feature);
+    this.ON_UPDATE(this.createCapture());
     return feature;
   }
 
@@ -160,7 +172,16 @@ class TestingRig {
 
     // calculate bboxes, etc
     for (const camera of this.CAMERAS) {
-      fieldDataCapture["frames"][camera.id] = { "features": {} };
+      fieldDataCapture["frames"][camera.id] = {
+        "width": 3000,
+        "height": 2000,
+        "features": {},
+        "metadata": {
+          fov: [camera.fov, 2/3 * camera.fov],
+          heading: camera.getHeading(),
+          latlon: [camera.getLatLon().lat, camera.getLatLon().lng],
+        },
+      };
       for (const feature of this.FEATURES) {
         const { distance, bearing: featureBearing } = this.wgs84Inverse({ from: camera.getLatLon(), to: feature.getLatLon() });
         // Check if feature in-view
@@ -177,6 +198,21 @@ class TestingRig {
       }
     }
 
+    for (const feature of this.FEATURES) {
+      fieldDataCapture["features"][feature.id] = feature.tags;
+    }
+
     return fieldDataCapture;
+  }
+
+  clear() {
+    this.FEATURE_ID = 0;
+    for (const f of this.FEATURES) {
+      f._layer.remove();
+    }
+    this.CAMERA_ID = 0;
+    for (const c of this.CAMERAS) {
+      c._layer.remove();
+    }
   }
 }

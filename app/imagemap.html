@@ -4,6 +4,7 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Image Map</title>
+  <!-- External Libraries -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
   crossorigin=""/>
@@ -11,28 +12,46 @@
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
   crossorigin=""></script>
   <script src="https://geographiclib.sourceforge.io/scripts/geographiclib-geodesic.min.js"></script>
-  <script src="./rig.js"></script>
-  <!-- <script type="module" src="./micro3d.mjs"></script> -->
-  <!-- <script type="module" src="../math.mjs"></script> -->
   <script src="../lib/exif-reader.js"></script>
+  <!-- Micro:3D Libraries -->
+  <script src="./rig.js"></script>
   <style>
     .obj { filter: hue-rotate(150deg) }
+    article { width: fit-content }
   </style>
 </head>
 <body>
   <main>
-    <!-- <p><label>📸 Select Images: <input type="file" multiple/></label></p> -->
-    <article id="testing-rig" style="width: 600px; height: 500px;"></article>
-    <output></output>
-    <samp></samp>
+    <article id="testing-rig"></article>
+    <article id="preview-rig"></article>
   </main>
   <script type="module">
     import { captureParameters, angleTo, CAPTURE, CAPTURETEST,CAPTURETEST2} from "../math.mjs";
     import { correlateDistances } from "./micro3d.mjs";
     const output = document.querySelector("output");
-    const exampleRig = new TestingRig("testing-rig", () => {
-      console.log(exampleRig.createCapture());
+    const previewRig = new TestingRig("preview-rig");
+    previewRig.MAP.setView([0, 0], 8);
+    const testingRig = new TestingRig("testing-rig", (cap) => {
+      previewRig.clear();
+      // console.log(cap);
+      try {
+        const [frameCoords, featureCoords] = correlateDistances(cap);
+        for (const [x, y] of Object.values(featureCoords)) {
+          previewRig.addFeature([x, y]);
+        }
+      } catch (e) {}
     });
+    // const FOV = 69.4;
+    // const CAM_TR = testingRig.addCamera([-33.88317, 151.20081], { fov: FOV, heading: 15 });
+    // const CAM_BR = testingRig.addCamera([-33.88311, 151.20076], { fov: FOV, heading: 100 });
+    // const CAM_BL = testingRig.addCamera([-33.88307, 151.20085], { fov: FOV, heading: 200 });
+    // const CAM_TL = testingRig.addCamera([-33.88310, 151.20088], { fov: FOV, heading: 250 });
+    // const CAM_TM = testingRig.addCamera([-33.883135, 151.200895], { fov: FOV, heading: 280 });
+    // const OBJ_BAG = testingRig.addFeature([-33.88315, 151.20082], { tags: { "description": "bag" } });
+    // const OBJ_BIN = testingRig.addFeature([-33.88308, 151.200872], { tags: { "amenity": "waste_basket" } });
+    // const OBJ_TABLE = testingRig.addFeature([-33.883125, 151.200855], { tags: { "amenity": "table" } });
+    // const OBJ_CHAIR = testingRig.addFeature([-33.88311, 151.20083], { tags: { "amenity": "chair" } });
+    // const OBJ_PLANT = testingRig.addFeature([-33.883129, 151.20077], { tags: { "man_made": "planter" } });
 
     // output.innerText += `${JSON.stringify(CAPTURE, null, 2)}\n`;
     //output.innerText += `${JSON.stringify(correlateDistances(CAPTURE), null, 2)}\n`;
@@ -54,6 +73,21 @@
     const OBJ_TABLE = exampleRig.addFeature(featureCoords[2], { tags: { "amenity": "table" } });
     const OBJ_CHAIR = exampleRig.addFeature(featureCoords[3], { tags: { "amenity": "chair" } });
     const OBJ_PLANT = exampleRig.addFeature(featureCoords[4], { tags: { "man_made": "planter" } });
+    // const [frameCoords,featureCoords] = correlateDistances(CAPTURE)
+    //output.innerText += `${JSON.stringify(correlateDistances(CAPTURE), null, 2)}\n`;
+
+    // window.addEventListener("load", async () => {
+    //   const tags = await ExifReader.load(await (await fetch("../img/IMG_4289.jpg")).arrayBuffer());
+    //   delete tags["MakerNote"];
+    //   const samp = document.querySelector("samp");
+    //   // samp.style.whiteSpace = "pre";
+    //   // samp.innerText += JSON.stringify(tags, null, 2);
+    //   const params = captureParameters(tags);
+    //   output.innerText += `${JSON.stringify(params, null, 2)}\n`;
+    //   // samp.innerText += `${angleTo({x:1008,y:1512},params.frame,params.fov).x}\n`;
+    //   // samp.innerText += "HFOV: " + ((2 * Math.atan(36 / 2 / tags["FocalLengthIn35mmFilm"]["value"]) * 180 / Math.PI)).toFixed(2);
+
+    // });
   </script>
 </body>
 </html>

@@ -358,7 +358,7 @@ function correlateDistances(capture) {
       if (mostSeen.id == feature_id) {
         const angles = angleTo(
           { x: bbox[0] + bbox[2] / 2, y: bbox[1] + bbox[3] / 2},
-          { x: bbox[0], y: bbox[1]},
+          { x: frame.width, y: frame.height },
           { x: frame.metadata.fov[0], y: frame.metadata.fov[1] }
         );
         mostSeenList.push({
