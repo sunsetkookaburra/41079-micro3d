@@ -27,7 +27,7 @@
     <samp></samp>
   </main>
   <script type="module">
-    import { captureParameters, angleTo, CAPTURE} from "../math.mjs";
+    import { captureParameters, angleTo, CAPTURE, CAPTURETEST,CAPTURETEST2} from "../math.mjs";
     import { correlateDistances } from "./micro3d.mjs";
     const output = document.querySelector("output");
     const exampleRig = new TestingRig("testing-rig", () => {
@@ -38,26 +38,17 @@
     //output.innerText += `${JSON.stringify(correlateDistances(CAPTURE), null, 2)}\n`;
     //output.innerText += `${JSON.stringify(debug(), null, 2)}\n`;
     const [frameCoords,featureCoords] = correlateDistances(CAPTURE)
-    //output.innerText += `${JSON.stringify(correlateDistances(CAPTURE), null, 2)}\n`;
-    
-    // window.addEventListener("load", async () => {
-    //   const tags = await ExifReader.load(await (await fetch("../img/IMG_4289.jpg")).arrayBuffer());
-    //   delete tags["MakerNote"];
-    //   const samp = document.querySelector("samp");
-    //   // samp.style.whiteSpace = "pre";
-    //   // samp.innerText += JSON.stringify(tags, null, 2);
-    //   const params = captureParameters(tags); 
-    //   output.innerText += `${JSON.stringify(params, null, 2)}\n`;
-    //   // samp.innerText += `${angleTo({x:1008,y:1512},params.frame,params.fov).x}\n`;
-    //   // samp.innerText += "HFOV: " + ((2 * Math.atan(36 / 2 / tags["FocalLengthIn35mmFilm"]["value"]) * 180 / Math.PI)).toFixed(2);
+    output.innerText += `${JSON.stringify(frameCoords, null, 2)}\n`;
+    output.innerText += `${JSON.stringify(featureCoords, null, 2)}\n`;
 
-    // });
+
     const FOV = 69.4;
     const CAM_TR = exampleRig.addCamera(frameCoords[0], { fov: FOV, heading: 15 });
     const CAM_BR = exampleRig.addCamera(frameCoords[1], { fov: FOV, heading: 100 });
     const CAM_BL = exampleRig.addCamera(frameCoords[2], { fov: FOV, heading: 200 });
     const CAM_TL = exampleRig.addCamera(frameCoords[3], { fov: FOV, heading: 250 });
     const CAM_TM = exampleRig.addCamera(frameCoords[4], { fov: FOV, heading: 280 });
+    const OBJ_ORIGIN = exampleRig.addFeature([0, 0], { tags: { "description": "0,0" } });
     const OBJ_BAG = exampleRig.addFeature(featureCoords[0], { tags: { "description": "bag" } });
     const OBJ_BIN = exampleRig.addFeature(featureCoords[1], { tags: { "amenity": "waste_basket" } });
     const OBJ_TABLE = exampleRig.addFeature(featureCoords[2], { tags: { "amenity": "table" } });

@@ -21,7 +21,7 @@ class TestingRig {
       </fieldset>`
     );
     this.MAP = L.map(this.ROOT.querySelector("div"))
-      .setView([-33.8831, 151.2008], 20)
+    .setView([0, 0], 7)//.setView([-33.8831, 151.2008], 20)
       .addLayer(L.tileLayer(
         "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
         { maxNativeZoom: 19, maxZoom: 21 },

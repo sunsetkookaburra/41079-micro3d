@@ -112,6 +112,141 @@ export const CAPTURE = {
   }
 };
 
+export const CAPTURETEST = {
+  "frames": {
+    0: {
+      "width": 4032,
+      "height": 3024,
+      "features": {
+        0: [360.874, 1462, 100, 100],
+        1: [3447.626, 1462, 100, 100]
+      },
+      "metadata": {
+        "fov": [69.4, 52.05],
+        "heading": 0,
+        "latlon": [-1, 0],
+        "elevation": 0.0,
+        "timestamp": new Date("2023/04/22 16:44:27.897+10:00").valueOf(),
+      }
+    },
+    1: {
+      "width": 4032,
+      "height": 3024,
+      "features": {
+        0: [1904.25, 1400.25, 223.5, 223.5]
+      },
+      "metadata": {
+        "fov": [69.4, 52.05],
+        "heading": 0,
+        "latlon": [0, -1],
+        "timestamp": new Date("2023/04/22 16:44:42.486+10:00").valueOf(),
+      }
+    },
+    2: {
+      "width": 4032,
+      "height": 3024,
+      "features": {
+        0: [1904.25, 1400.25, 223.5, 223.5]
+      },
+      "metadata": {
+        "fov": [69.4, 52.05],
+        "heading": 90,
+        "latlon": [1, 0],
+        "timestamp": new Date("2023/04/22 16:44:56.974+10:00").valueOf(),
+      }
+    },
+    3: {
+      "width": 4032,
+      "height": 3024,
+      "features": {
+        0: [1904.25, 1400.25, 223.5, 223.5]
+      },
+      "metadata": {
+        "fov": [69.4, 52.05], 
+        "heading": 0,
+        "latlon": [0, 1],
+        "timestamp": new Date("2023/04/22 16:45:10.275+10:00").valueOf(),
+      }
+    }
+  },
+  "features": {
+    0: {
+      "description": "bag"
+    },
+    1: {
+      "amenity": "waste_basket"
+    },
+  }
+};
+
+export const CAPTURETEST2 = {
+  "frames": {
+    0: {
+      "width": 4032,
+      "height": 3024,
+      "features": {
+        0: [1966, 1462, 300, 300],
+        1: [1966, 1462, 100, 100]
+      },
+      "metadata": {
+        "fov": [69.4, 52.05],
+        "heading": 0,
+        "latlon": [-1, 0],
+        "elevation": 0.0,
+        "timestamp": new Date("2023/04/22 16:44:27.897+10:00").valueOf(),
+      }
+    },
+    1: {
+      "width": 4032,
+      "height": 3024,
+      "features": {
+        0: [1966, 1462, 100, 100],
+        1: [17.1, 1462, 83.2, 83.2]
+      },
+      "metadata": {
+        "fov": [69.4, 52.05],
+        "heading": 90,
+        "latlon": [0, -1],
+        "timestamp": new Date("2023/04/22 16:44:42.486+10:00").valueOf(),
+      }
+    },
+    2: {
+      "width": 4032,
+      "height": 3024,
+      "features": {
+        1: [1966, 1462, 300, 300]
+      },
+      "metadata": {
+        "fov": [69.4, 52.05],
+        "heading": 0,
+        "latlon": [1, 0],
+        "timestamp": new Date("2023/04/22 16:44:56.974+10:00").valueOf(),
+      }
+    },
+    3: {
+      "width": 4032,
+      "height": 3024,
+      "features": {
+        0: [1966, 1462, 100, 100],
+        1: [3931.7, 1462, 83.2, 83.2]
+      },
+      "metadata": {
+        "fov": [69.4, 52.05], 
+        "heading": 270,
+        "latlon": [0, 3],
+        "timestamp": new Date("2023/04/22 16:45:10.275+10:00").valueOf(),
+      }
+    }
+  },
+  "features": {
+    0: {
+      "description": "bag"
+    },
+    1: {
+      "amenity": "waste_basket"
+    },
+  }
+};
 // const FINAL_CAPTURE = {
 //   frames: {
 //     0: {
@@ -308,8 +443,8 @@ export function captureParameters(exifTags) {
 /** Angle to point, +X Right, +Y Up (cartesian) */
 export function angleTo(point, frame, fov) {
   return {
-    x: point.x / (frame.x+0.01) * fov.x - fov.x / 2,
-    y: -(point.y / (frame.y+0.01) * fov.y - fov.y / 2),
+    x: point.x / frame.x * fov.x - fov.x / 2,
+    y: -(point.y / frame.y * fov.y - fov.y / 2),
   };
 }
 
