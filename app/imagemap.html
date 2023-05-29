@@ -24,6 +24,7 @@
   <main>
     <article id="testing-rig"></article>
     <article id="preview-rig"></article>
+    <output></output>
   </main>
   <script type="module">
     import { captureParameters, angleTo, CAPTURE, CAPTURETEST,CAPTURETEST2} from "../math.mjs";
@@ -62,17 +63,17 @@
 
 
     const FOV = 69.4;
-    const CAM_TR = exampleRig.addCamera(frameCoords[0], { fov: FOV, heading: 15 });
-    const CAM_BR = exampleRig.addCamera(frameCoords[1], { fov: FOV, heading: 100 });
-    const CAM_BL = exampleRig.addCamera(frameCoords[2], { fov: FOV, heading: 200 });
-    const CAM_TL = exampleRig.addCamera(frameCoords[3], { fov: FOV, heading: 250 });
-    const CAM_TM = exampleRig.addCamera(frameCoords[4], { fov: FOV, heading: 280 });
-    const OBJ_ORIGIN = exampleRig.addFeature([0, 0], { tags: { "description": "0,0" } });
-    const OBJ_BAG = exampleRig.addFeature(featureCoords[0], { tags: { "description": "bag" } });
-    const OBJ_BIN = exampleRig.addFeature(featureCoords[1], { tags: { "amenity": "waste_basket" } });
-    const OBJ_TABLE = exampleRig.addFeature(featureCoords[2], { tags: { "amenity": "table" } });
-    const OBJ_CHAIR = exampleRig.addFeature(featureCoords[3], { tags: { "amenity": "chair" } });
-    const OBJ_PLANT = exampleRig.addFeature(featureCoords[4], { tags: { "man_made": "planter" } });
+    const CAM_TR = previewRig.addCamera(frameCoords[0], { fov: FOV, heading: 15 });
+    const CAM_BR = previewRig.addCamera(frameCoords[1], { fov: FOV, heading: 100 });
+    const CAM_BL = previewRig.addCamera(frameCoords[2], { fov: FOV, heading: 200 });
+    const CAM_TL = previewRig.addCamera(frameCoords[3], { fov: FOV, heading: 250 });
+    const CAM_TM = previewRig.addCamera(frameCoords[4], { fov: FOV, heading: 280 });
+    const OBJ_ORIGIN = previewRig.addFeature([0, 0], { tags: { "description": "0,0" } });
+    const OBJ_BAG = previewRig.addFeature(featureCoords[0], { tags: { "description": "bag" } });
+    const OBJ_BIN = previewRig.addFeature(featureCoords[1], { tags: { "amenity": "waste_basket" } });
+    const OBJ_TABLE = previewRig.addFeature(featureCoords[2], { tags: { "amenity": "table" } });
+    const OBJ_CHAIR = previewRig.addFeature(featureCoords[3], { tags: { "amenity": "chair" } });
+    const OBJ_PLANT = previewRig.addFeature(featureCoords[4], { tags: { "man_made": "planter" } });
     // const [frameCoords,featureCoords] = correlateDistances(CAPTURE)
     //output.innerText += `${JSON.stringify(correlateDistances(CAPTURE), null, 2)}\n`;
 
