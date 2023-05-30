@@ -31,10 +31,8 @@
     import { correlateDistances } from "./micro3d.mjs";
     const output = document.querySelector("output");
     const previewRig = new TestingRig("preview-rig");
-    previewRig.MAP.setView([0, 0], 8);
     const testingRig = new TestingRig("testing-rig", (cap) => {
       previewRig.clear();
-      // console.log(cap);
       try {
         const [frameCoords, featureCoords] = correlateDistances(cap);
         for (const [x, y] of Object.values(featureCoords)) {

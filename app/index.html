@@ -1,50 +1,76 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8"/>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"
-  integrity="sha256-kLaT2GOSpHechhsozzB+flnD+zUyjE2LlfWPgU04xyI="
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
   crossorigin=""/>
-  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"
-  integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM="
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
   crossorigin=""></script>
-  <script
-  type="text/javascript"
-  src="https://geographiclib.sourceforge.io/scripts/geographiclib-geodesic.min.js">
-</script>
+  <script src="https://geographiclib.sourceforge.io/scripts/geographiclib-geodesic.min.js"></script>
+  <!-- Micro:3D Libraries -->
+  <style>
+    .obj { filter: hue-rotate(150deg) }
+    article { width: fit-content }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>Micro:3D</h1>
-  </header>
-  <hr/>
   <main>
-    <h2>Collection</h2>
-    <p><label>📸 Select Images: <input type="file" multiple/></label></p>
-    <p><label>📦 Select BBoxes: <input type="file"/></label></p>
-    <p><label>🛰️ Select Inertial: <input type="file"/></label></p>
-    <h2>Preprocessing</h2>
-    <h3>Bounding Boxes</h3>
-    <select id="bbox-preview-select"></select>
-    <figure id="bbox-preview-figure"><img src="../img/bbox.png" width="600px"/></figure>
-    <h2>Correlation</h2>
-    <p><button>Update</button></p>
-    <h2>Visualisation</h2>
-    <figure id="map" style="width: 600px; height: 400px;"></figure>
+    <article id="testing-rig"></article>
+    <article id="bboxes">
+      <fieldset>
+        <legend>BBoxes</legend>
+      </fieldset>
+    </article>
+    <output style="white-space:pre;"></output>
+    <article>
+      <fieldset>
+        <legend>Correlation Results</legend>
+        <div id="preview" style="width:600px;height:400px;"></div>
+      </fieldset>
+    </article>
   </main>
   <script type="module">
-    import { CAPTURE } from "../math.mjs";
+    // import { correlateDistances } from "./micro3d.mjs";
+    import * as L from "../lib/leaflet-src.esm.js";
+    import { bboxToSvg } from "./bbox.mjs";
+    import { CaptureRig } from "./rig.mjs";
+    import { correlate } from "./correlate.mjs";
 
-    const map = L.map("map")
-      .setView([-33.883, 151.2], 17)
-      .addLayer(L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }));
+    const map = L.map("preview")
+      .setView([0, 0], 7)//.setView([-33.8831, 151.2008], 20)
+      .addLayer(L.tileLayer(
+        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        { maxNativeZoom: 19, maxZoom: 21 },
+      ));
 
-    for (const [id, frame] of Object.entries(CAPTURE["frames"])) {
-      const latlon = frame["metadata"]["latlon"];
-      L.marker(latlon, { title: String(id) }).addTo(map);
-    }
+    const markers = L.featureGroup().addTo(map);
 
-    console.log(geodesic.Geodesic.WGS84.Inverse(0, 0, 1, 15))
+    const testingRig = new CaptureRig("testing-rig", (capture) => {
+      const bboxParent = document.querySelector("#bboxes fieldset");
+      const oldSvgs = document.querySelectorAll("#bboxes svg");
+      for (const svg of oldSvgs) {
+        svg.parentElement.removeChild(svg);
+      }
+      for (const [frameId, frame] of Object.entries(capture["frames"])) {
+        bboxParent.insertAdjacentHTML(
+          "beforeend",
+          bboxToSvg(frame, Object.values(frame.features))
+        );
+      }
+      // console.log(capture);
+      // document.querySelector("output").innerText = JSON.stringify(cap, null, 2);
+      try {
+        markers.clearLayers();
+        const [frameCoords, featureCoords] = correlate(capture);
+        for (const [x, y] of Object.values(featureCoords)) {
+          markers.addLayer(L.marker([x, y]));
+        }
+      } catch (e) {
+        // console.log(e);
+      }
+    });
+    testingRig.MAP.setView([0, 0], 21);
   </script>
 </body>
 </html>
