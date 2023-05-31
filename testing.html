@@ -1,14 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-  crossorigin=""/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-  crossorigin=""></script>
-  <script src="https://geographiclib.sourceforge.io/scripts/geographiclib-geodesic.min.js"></script>
-  <!-- Micro:3D Libraries -->
+  <link rel="stylesheet" href="./lib/leaflet.css"/>
   <style>
     .obj { filter: hue-rotate(150deg) }
     article { width: fit-content }
@@ -22,7 +15,7 @@
 </head>
 <body>
 <header>
-  <h1>Micro3D</h1>
+  <h1>Micro3D - Testing App</h1>
   <p>Visit <a href="./index.html">The Main App</a> for testing capture datasets.</p>
   <p>Visit <a href="./testing.html">The Testing App</a> for creating test datasets.</p>
 </header>
@@ -48,10 +41,10 @@
   </article>
 </main>
 <script type="module">
-  import * as L from "../lib/leaflet-src.esm.js";
-  import { bboxToSvg } from "./bbox.mjs";
-  import { CaptureRig } from "./rig.mjs";
-  import { correlate } from "./correlate.mjs";
+  import * as L from "./lib/leaflet-src.esm.js";
+  import { bboxToSvg } from "./src/bbox.mjs";
+  import { CaptureRig } from "./src/rig.mjs";
+  import { correlate } from "./src/correlate.mjs";
 
   const map = L.map("preview")
     .setView([-33.8831, 151.2008], 20)
