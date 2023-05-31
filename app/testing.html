@@ -21,72 +21,79 @@
   </style>
 </head>
 <body>
-  <main>
-    <article id="testing-rig"></article>
-    <article id="bboxes">
-      <fieldset>
-        <legend>BBoxes</legend>
-      </fieldset>
-    </article>
-    <article id="output">
-      <fieldset>
-        <legend>Testing Output</legend>
-        <pre><output></output></pre>
-      </fieldset>
-    </article>
-    <article>
-      <fieldset>
-        <legend>Correlation Results</legend>
-        <div id="preview" style="width:600px;height:400px;"></div>
-      </fieldset>
-    </article>
-  </main>
-  <script type="module">
-    import * as L from "../lib/leaflet-src.esm.js";
-    import { bboxToSvg } from "./bbox.mjs";
-    import { CaptureRig } from "./rig.mjs";
-    import { correlate } from "./correlate.mjs";
+<header>
+  <h1>Micro3D</h1>
+  <p>Visit <a href="./index.html">The Main App</a> for testing capture datasets.</p>
+  <p>Visit <a href="./testing.html">The Testing App</a> for creating test datasets.</p>
+</header>
+<main>
+  <article id="testing-rig"></article>
+  <article id="bboxes">
+    <fieldset>
+      <legend>BBoxes</legend>
+    </fieldset>
+  </article>
+  <article id="output">
+    <fieldset>
+      <legend>Testing Output</legend>
+      <pre><output></output></pre>
+    </fieldset>
+  </article>
+  <article>
+    <fieldset>
+      <legend>Correlation Results</legend>
+      <div id="preview" style="width:600px;height:400px;"></div>
+      <pre><output id="correlationOutput"></output></pre>
+    </fieldset>
+  </article>
+</main>
+<script type="module">
+  import * as L from "../lib/leaflet-src.esm.js";
+  import { bboxToSvg } from "./bbox.mjs";
+  import { CaptureRig } from "./rig.mjs";
+  import { correlate } from "./correlate.mjs";
 
-    const map = L.map("preview")
-      .setView([-33.8831, 151.2008], 20)
-      .addLayer(L.tileLayer(
-        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-        { maxNativeZoom: 19, maxZoom: 21 },
+  const map = L.map("preview")
+    .setView([-33.8831, 151.2008], 20)
+    .addLayer(L.tileLayer(
+      "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+      { maxNativeZoom: 19, maxZoom: 21 },
+    ));
+
+  const markers = L.featureGroup().addTo(map);
+
+  const testingRig = new CaptureRig("testing-rig", (capture) => {
+    document.querySelector("#output output").innerText = JSON.stringify(capture, null, 2);
+    const bboxParent = document.querySelector("#bboxes fieldset");
+    const oldSvgs = document.querySelectorAll("#bboxes svg");
+    for (const svg of oldSvgs) {
+      svg.parentElement.removeChild(svg);
+    }
+    for (const [frameId, frame] of Object.entries(capture["frames"])) {
+      bboxParent.insertAdjacentHTML(
+        "beforeend",
+        bboxToSvg(frame, Object.values(frame.features))
+      );
+    }
+    markers.clearLayers();
+    const { features, frames } = correlate(capture);
+    document.getElementById("correlationOutput").innerText = JSON.stringify({ features, frames }, null, 2);
+    for (const [feature_id, { coords, tags }] of Object.entries(features)) {
+      markers.addLayer(L.marker(
+        [coords.lat, coords.lon],
+        {
+          riseOnHover: true,
+          icon: new L.Icon.Default({ className: "obj" }),
+        }
       ));
-
-    const markers = L.featureGroup().addTo(map);
-
-    const testingRig = new CaptureRig("testing-rig", (capture) => {
-      document.querySelector("#output output").innerText = JSON.stringify(capture, null, 2);
-      const bboxParent = document.querySelector("#bboxes fieldset");
-      const oldSvgs = document.querySelectorAll("#bboxes svg");
-      for (const svg of oldSvgs) {
-        svg.parentElement.removeChild(svg);
-      }
-      for (const [frameId, frame] of Object.entries(capture["frames"])) {
-        bboxParent.insertAdjacentHTML(
-          "beforeend",
-          bboxToSvg(frame, Object.values(frame.features))
-        );
-      }
-      markers.clearLayers();
-      const { features, frames } = correlate(capture);
-      for (const [feature_id, { coords, tags }] of Object.entries(features)) {
-        markers.addLayer(L.marker(
-          [coords.lat, coords.lon],
-          {
-            riseOnHover: true,
-            icon: new L.Icon.Default({ className: "obj" }),
-          }
-        ));
-      }
-      for (const [frame_id, { coords }] of Object.entries(frames)) {
-        markers.addLayer(L.marker([coords.lat, coords.lon]));
-      }
-      if (markers.getLayers().length > 0) {
-        map.fitBounds(markers.getBounds());
-      }
-    });
-  </script>
+    }
+    for (const [frame_id, { coords }] of Object.entries(frames)) {
+      markers.addLayer(L.marker([coords.lat, coords.lon]));
+    }
+    if (markers.getLayers().length > 0) {
+      map.fitBounds(markers.getBounds());
+    }
+  });
+</script>
 </body>
 </html>

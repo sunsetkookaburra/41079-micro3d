@@ -27,6 +27,8 @@
 <body>
 <header>
   <h1>Micro3D</h1>
+  <p>Visit <a href="./index.html">The Main App</a> for testing capture datasets.</p>
+  <p>Visit <a href="./testing.html">The Testing App</a> for creating test datasets.</p>
 </header>
 <main>
   <article id="upload">
@@ -52,6 +54,7 @@
     <fieldset>
       <legend>Correlation Results</legend>
       <div id="preview" style="width:600px;height:400px;"></div>
+      <pre><output id="correlationOutput"></output></pre>
     </fieldset>
   </article>
 </main>
@@ -96,6 +99,7 @@
     }
     markers.clearLayers();
     const { features, frames } = correlate(capture);
+    document.getElementById("correlationOutput").innerText = JSON.stringify({ features, frames }, null, 2);
     for (const [feature_id, { coords, tags }] of Object.entries(features)) {
       markers.addLayer(L.marker(
         [coords.lat, coords.lon],
