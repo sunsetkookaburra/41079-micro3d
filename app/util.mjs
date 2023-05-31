@@ -2,27 +2,50 @@
 
 import "../lib/geographiclib-geodesic.min.js";
 
-export const _COORD = { lat: 0, lon: 0 };
-export const _BBOX = { x: 0, y: 0, w: 0, h: 0 };
-export const _CAPTURE = {
- frames: {
-    0: {
-      width: 0,
-      height: 0,
-      features: {
-        0: _BBOX
-      },
-      coords: _COORD,
-      fov: { h: 0, v: 0 },
-      heading: 0,
-      elevation: 0,
-      gps_error: 0,
-      timestamp: 0,
-    }},
-  features: {
-    0: { "ref": "" }
-  },
-};
+/**
+ * @typedef {{lat:number,lon:number}} Coords
+ *
+ * @typedef {{x:number,y:number,w:number,h:number}} Bbox
+ *
+ * @typedef {{
+ *  frames: {
+ *    [frame_id: string]: {
+ *      width: number,
+ *      height: number,
+ *      features: {
+ *        [feature_id: string]: Bbox
+ *      },
+ *      coords: Coords,
+ *      fov: { h: number, v: number },
+ *      heading: number,
+ *      elevation?: number,
+ *      gps_error?: number,
+ *      timestamp?: number,
+ *    },
+ *  },
+ *  features: {
+ *    [feature_id: string]: {
+ *      [osmTagKey: string]: string,
+ *    },
+ *  },
+ * }} Capture
+ *
+ * @typedef {{
+ *   features: {
+ *     [feature_id: string]: {
+ *       coords: Coords,
+ *       tags: {
+ *         [osmTagKey: string]: string
+ *       }
+ *     },
+ *   },
+ *   frames: {
+ *     [frame_id: string]: {
+ *       coords: Coords
+ *     },
+ *   },
+ * }} Positioned
+ */
 
 /**
  *
@@ -38,7 +61,7 @@ export function turnBetween({from, to}) {
 
 /**
  *
- * @param {{from: typeof _COORD, to: typeof _COORD}} points
+ * @param {{from: Coords, to: Coords}} points
  * @returns {{bearing: number, distance: number}}
  */
 export function wgs84Inverse({from, to}) {
@@ -55,8 +78,8 @@ export function wgs84Inverse({from, to}) {
 
 /**
  *
- * @param {{from: typeof _COORD, heading: number, distance: number}} points
- * @returns {typeof _COORD}
+ * @param {{from: Coords, heading: number, distance: number}} points
+ * @returns {Coords}
  */
 export function wgs84Navigate({from, heading, distance}) {
   //@ts-expect-error (geodesic from side-effect import)
@@ -69,4 +92,36 @@ export function wgs84Navigate({from, heading, distance}) {
     lat: result.lat2,
     lon: result.lon2,
   };
+}
+
+/**
+ *
+ * @param {(Coords & { weight?: number })[]} points
+ */
+export function centroid(points) {
+  let sumLat = 0, sumLatWeight = 0;
+  let sumLon = 0, sumLonWeight = 0;
+  for (const { lat, lon, weight } of points) {
+    sumLat += lat;
+    sumLatWeight += weight ?? 1;
+    sumLon += lon;
+    sumLonWeight += weight ?? 1;
+  }
+  return {
+    lat: sumLat / sumLatWeight,
+    lon: sumLon / sumLonWeight,
+  };
+}
+
+/**
+ *
+ * @param {Coords} from
+ * @param {Coords[]} points
+ */
+export function meanDistance(from, points) {
+  let sumDist = 0;
+  for (const point of points) {
+    sumDist += wgs84Inverse({ from, to: point }).distance;
+  }
+  return sumDist / points.length;
 }

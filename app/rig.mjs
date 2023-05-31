@@ -1,7 +1,7 @@
 //@ts-check
 
 import * as L from "../lib/leaflet-src.esm.js";
-import { wgs84Inverse, wgs84Navigate, turnBetween, _COORD, _BBOX, _CAPTURE } from "./util.mjs";
+import { wgs84Inverse, wgs84Navigate, turnBetween } from "./util.mjs";
 
 export class Frame {
   /** @type {{remove(): void} | null} */
@@ -14,7 +14,7 @@ export class Frame {
    *  height: number,
    *  fov: { h: number, v: number},
    *  heading: number,
-   *  coords: typeof _COORD
+   *  coords: import("./util.mjs").Coords
    * }} state
    */
   constructor(state) {
@@ -25,7 +25,7 @@ export class Frame {
    *
    * @param {Feature} feature
    */
-  _navigateToward(feature) {
+  navigateToward(feature) {
     const { bearing, distance } = wgs84Inverse({
       from: this.state.coords,
       to: feature.coords
@@ -41,70 +41,6 @@ export class Frame {
       distance,
     };
   }
-
-  /**
-   *
-   * @param {Feature[]} allFeatures
-   */
-  findBboxes(allFeatures) {
-    /** @type {Map<Feature,{x:number,y:number,w:number,h:number}>} */
-    const bboxes = new Map();
-    let minDistance = Infinity;
-    let maxDistance = -Infinity;
-    /** @type {{ feature: Feature, distance: number, turn: number }[]} */
-    const visibleFeatures = [];
-    for (const feature of allFeatures) {
-      const { visible, distance, turn } = this._navigateToward(feature);
-      if (visible) {
-        if (distance < minDistance) minDistance = distance;
-        if (distance > maxDistance) maxDistance = distance;
-        visibleFeatures.push({ feature, distance, turn });
-      }
-    }
-    for (const { feature, distance, turn } of visibleFeatures) {
-      /** 0.75 -> 0 at ifty */
-      const relativeSize = 0.75 * (minDistance / distance);
-      const minDimension = Math.min(this.state.width, this.state.height);
-      const bboxSize = relativeSize * minDimension;
-      const destX = this.state.width * (turn / this.state.fov.h + 0.5);
-      bboxes.set(
-        feature,
-        {
-          x: destX - bboxSize / 2,
-          y: this.state.height / 2 - bboxSize / 2,
-          w: bboxSize,
-          h: bboxSize
-        }
-      );
-    }
-    return bboxes;
-  }
-
-  /**
-   *
-   * @param {(typeof _BBOX)[]} bboxes
-   * @returns
-   */
-  toHTML(bboxes = []) {
-    return `
-      <div>
-        <p>
-          ${this.state.width}x${this.state.height};
-          ${this.state.fov.h} ${this.state.fov.v};
-          ${this.state.heading}°
-          @ ${this.state.coords.lat.toFixed(7)}N
-          ${this.state.coords.lon.toFixed(7)}W
-        </p>
-        ${
-          bboxes.length > 0
-          ? `<ul>
-            ${bboxes.map(v => `<li>${JSON.stringify(v)}</li>`).join()}
-            </ul>`
-          : ""
-        }
-      </div>
-    `;
-  }
 }
 
 export class Feature {
@@ -114,23 +50,59 @@ export class Feature {
   tags = {}
   /**
    *
-   * @param {typeof _COORD} coords
+   * @param {import("./util.mjs").Coords} coords
    * @param {Record<string,string>} tags
    */
   constructor(coords, tags = {}) {
     this.coords = coords;
     this.tags = tags;
   }
+
+  /**
+   * @returns {Map<Frame, import("./util.mjs").Bbox>}
+   * @param {Frame[]} allFrames
+   */
+  findSelf(allFrames) {
+    /** @type {Map<Frame, import("./util.mjs").Bbox>} */
+    const bboxes = new Map();
+    let minDistance = Infinity;
+    let maxDistance = -Infinity;
+    /** @type {{ frame: Frame, distance: number, turn: number }[]} */
+    const seenFromFrames = [];
+    for (const frame of allFrames) {
+      const { visible, distance, turn } = frame.navigateToward(this);
+      if (visible) {
+        if (distance < minDistance) minDistance = distance;
+        if (distance > maxDistance) maxDistance = distance;
+        seenFromFrames.push({ frame, distance, turn });
+      }
+    }
+    for (const { frame, distance, turn } of seenFromFrames) {
+      /** 0.75 -> 0 at ifty */
+      const relativeSize = 0.75 * (minDistance / (distance + 0.0001));
+      const minDimension = Math.min(frame.state.width, frame.state.height);
+      const bboxSize = relativeSize * minDimension;
+      const destX = frame.state.width * (turn / frame.state.fov.h + 0.5);
+      bboxes.set(
+        frame,
+        {
+          x: destX - bboxSize / 2,
+          y: frame.state.height / 2 - bboxSize / 2,
+          w: bboxSize,
+          h: bboxSize
+        }
+      );
+    }
+    return bboxes;
+  }
 }
 
 export class CaptureRig {
-  FRAME_ID = 0;
+  haveMoved = true;
   /** @type {Frame[]} */
   FRAMES = [];
-  FEATURE_ID = 0;
   /** @type {Feature[]} */
   FEATURES = [];
-
   /**
    *
    * @param {HTMLElement | string} elementOrId
@@ -155,13 +127,15 @@ export class CaptureRig {
       </fieldset>`
     );
     this.MAP = L.map(this.ROOT.querySelector("div"))
-    .setView([0, 0], 7)//.setView([-33.8831, 151.2008], 20)
+    .setView([-33.8831, 151.2008], 20)
       .addLayer(L.tileLayer(
         "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
         { maxNativeZoom: 19, maxZoom: 21 },
       ));
     // Add Camera
     this.ROOT.querySelector("button:nth-of-type(1)")?.addEventListener("click", () => {
+      if (!this.haveMoved) return;
+      this.haveMoved = false;
       const center = this.MAP.getCenter();
       this.addCamera({ lat: center.lat, lon: center.lng }, { fov: Number(this.ROOT.querySelector("input")?.value) || 69.4, heading: 0 });
       // this.ON_UPDATE(this.createCapture());
@@ -193,7 +167,7 @@ export class CaptureRig {
 
   /**
    *
-   * @param {typeof _COORD} coords
+   * @param {import("./util.mjs").Coords} coords
    * @param {{fov: number, heading: number}} param1
    * @returns
    */
@@ -250,6 +224,7 @@ export class CaptureRig {
     };
     node.on("drag", updateEditNode);
     marker.on("drag", ev => {
+      this.haveMoved = true;
       this.ON_UPDATE(this.createCapture());
       const from = { lat: ev.latlng.lat, lon: ev.latlng.lng };
       const newPos = wgs84Navigate({ from, heading: camera.state.heading, distance });
@@ -260,10 +235,13 @@ export class CaptureRig {
     marker.bindPopup(() => {
       const close = document.createElement("button");
       close.innerText = "Remove";
-      close.addEventListener("click", () => group.remove());
+      close.addEventListener("click", () => {
+        group.remove();
+        this.FRAMES = this.FRAMES.filter(v => v === camera);
+      });
       return close;
     });
-    marker.bindTooltip(`id:${this.FRAME_ID}`);
+    marker.bindTooltip(`id:${this.FRAMES.length}`);
     group.addTo(this.MAP);
     camera._layer = group;
 
@@ -274,7 +252,7 @@ export class CaptureRig {
 
   /**
    *
-   * @param {typeof _COORD} coords
+   * @param {import("./util.mjs").Coords} coords
    * @param {Record<string,string>} tags
    * @returns
    */
@@ -288,13 +266,17 @@ export class CaptureRig {
       this.ON_UPDATE(this.createCapture());
       feature.coords = { lat: ev.latlng.lat, lon: ev.latlng.lng };
     });
-    marker.bindTooltip(`id:${this.FEATURE_ID} | ${JSON.stringify(tags)}`);
+    marker.bindTooltip(`id:${this.FEATURES.length} | ${JSON.stringify(tags)}`);
     marker.bindPopup(() => {
       const close = document.createElement("button");
       close.innerText = "Remove";
-      close.addEventListener("click", () => marker.remove());
+      close.addEventListener("click", () => {
+        marker.remove();
+        this.FEATURES = this.FEATURES.filter(v => v === feature);
+      });
       return close;
     });
+    feature._layer = marker;
 
     this.FEATURES.push(feature);
     this.ON_UPDATE(this.createCapture());
@@ -305,17 +287,20 @@ export class CaptureRig {
     const fieldDataCapture = { "frames": {}, "features": {} };
     const featureIds = new Map(this.FEATURES.map((v, i) => [v, i]));
 
-    // calculate bboxes, etc
+    // Fill-in frame data
     for (let frameId = 0; frameId < this.FRAMES.length; ++frameId) {
-      const frame = this.FRAMES[frameId];
-      const features = {};
-      for (const [feature, bbox] of frame.findBboxes(this.FEATURES)) {
-        features[featureIds.get(feature)] = bbox;
-      }
-      fieldDataCapture["frames"][frameId] = {
-        ...frame.state,
-        features,
+      fieldDataCapture.frames[frameId] = {
+        ...this.FRAMES[frameId].state,
+        features: {},
       };
+    }
+
+    // calculate bboxes
+    for (let featureId = 0; featureId < this.FEATURES.length; ++featureId) {
+      const feature = this.FEATURES[featureId];
+      for (const [frame, bbox] of feature.findSelf(this.FRAMES)) {
+        fieldDataCapture.frames[this.FRAMES.indexOf(frame)].features[featureId] = bbox;
+      }
     }
 
     for (const feature of this.FEATURES) {
@@ -326,15 +311,14 @@ export class CaptureRig {
   }
 
   clear() {
-    this.FEATURE_ID = 0;
     for (const f of this.FEATURES) {
       f._layer?.remove();
     }
     this.FEATURES = [];
-    this.FRAME_ID = 0;
     for (const c of this.FRAMES) {
       c._layer?.remove();
     }
     this.FRAMES = [];
+    this.ON_UPDATE(this.createCapture());
   }
 }

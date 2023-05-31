@@ -1,9 +1,16 @@
-import {angleTo,bearingAcuteAngle} from "../math.mjs";
-import { _CAPTURE } from "./util.mjs";
 //@ts-check
 
+import { angleTo, bearingAcuteAngle } from "../math.mjs";
+import { centroid, meanDistance } from "./util.mjs";
+
+/**
+ *
+ * @param {number} distance
+ * @param {number} heading
+ * @returns
+ */
 function navigate(distance, heading) {
-  const theta = heading * Math.PI / 180;// changed from (Math.PI / 2) - (heading * Math.PI / 180); -Keegan
+  const theta = heading * Math.PI / 180;
   return [
     distance * Math.cos(theta),
     distance * Math.sin(theta),
@@ -11,12 +18,16 @@ function navigate(distance, heading) {
 }
 
 /**
- *
- * @param {typeof _CAPTURE} capture
+ * @returns {import("./util.mjs").Positioned}
+ * @param {import("./util.mjs").Capture} capture
  */
 export function correlate(capture) {
   // (1) Build one graph for each feature:
 
+  /**
+   * @type {Map<string, { frame_id: string, scale: number, heading: number }[]>}
+   * feature_id :: ...
+   */
   const groupedFeatures = new Map();
 
   for (const [frame_id, frame] of Object.entries(capture["frames"])) {
@@ -29,7 +40,7 @@ export function correlate(capture) {
         { x: frame.width, y: frame.height },
         { x: frame.fov.h, y: frame.fov.v },
       );
-      groupedFeatures.get(feature_id).push({
+      groupedFeatures.get(feature_id)?.push({
         frame_id,
         scale: bbox.h,
         heading: frame.heading + angles.x,
@@ -42,10 +53,19 @@ export function correlate(capture) {
   }
 
   if (groupedFeatures.size == 0) {
-    throw new Error("Not enough frames to correlate");
+    // throw new Error("Not enough frames to correlate");
+    return { features: {}, frames: {} };
   }
+  /**
+   * @type {{
+   *  feature_id: string,
+   *  graph: { [frame_id: string]: number },
+   *  frameDistanceRatios: { [frame_i_j_edge: string]: number }
+   * }[]}
+   */
   const featureGraphs = [];
   for (const [feature_id, group] of groupedFeatures) {
+    /** @type {{ [frame_id: string]: number }} */
     const graph = {};
     // relative distances from frames to feature
     //
@@ -53,6 +73,7 @@ export function correlate(capture) {
         graph[group[i].frame_id] = group[0].scale / group[i].scale;
     }
     // relative distances between frames
+    /** @type {{ [frame_i_j_edge: string]: number }} */
     const frameDistanceRatios = {};
     for (let i = 0; i < group.length; ++i) {
       for (let j = i + 1; j < group.length; ++j) {
@@ -75,39 +96,34 @@ export function correlate(capture) {
   }
 
   // normalise ratios across all features
-  const ratios = {}
-  for (var edge in featureGraphs[0].frameDistanceRatios) {
-    ratios[edge] = featureGraphs[0].frameDistanceRatios[edge];
+  /** @type {{ [frame_i_j_edge: string]: number }} */
+  const relativeDistances = {}
+  for (const edge in featureGraphs[0].frameDistanceRatios) {
+    relativeDistances[edge] = featureGraphs[0].frameDistanceRatios[edge];
   }
-  var adjusted = ["0"];
-  var changed = true;
+  let adjusted = ["0"];
+  let changed = true;
 
-  while (adjusted.length!=featureGraphs.length && changed == true) {
+  while (adjusted.length != featureGraphs.length && changed == true) {
     changed = false;
     // check if in ratios then adjust
-    for (const { feature_id} of featureGraphs) {
-      var frameDistanceRatios = featureGraphs[feature_id].frameDistanceRatios;
-      var graph = featureGraphs[feature_id].graph;
+    for (const { feature_id, graph, frameDistanceRatios } of featureGraphs) {
       if (!adjusted.includes(feature_id)) {
+        /** @type {number[]} */
         const factors = [];
-        for (var edge in frameDistanceRatios) {
-          if (edge in ratios) {
-            factors.push(ratios[edge] / frameDistanceRatios[edge]);
+        for (const edge in frameDistanceRatios) {
+          if (edge in relativeDistances) {
+            factors.push(relativeDistances[edge] / frameDistanceRatios[edge]);
           }
         }
-        if (factors.length!=0) {
-
-          var avgfactor = 0;
-          for (var i in factors) {
-            avgfactor += factors[i];
-          }
-          avgfactor /= factors.length;
+        if (factors.length > 0) {
+          const avgFactor = factors.reduce((acc, x) => acc + x, 0) / factors.length;
           for (var edge in frameDistanceRatios) {
-            featureGraphs[feature_id].frameDistanceRatios[edge] *= avgfactor;
-            ratios[edge] = featureGraphs[feature_id].frameDistanceRatios[edge];
+            frameDistanceRatios[edge] *= avgFactor;
+            relativeDistances[edge] = frameDistanceRatios[edge];
           }
           for (var edge in graph) {
-            featureGraphs[feature_id].graph[edge] *= avgfactor;
+            graph[edge] *= avgFactor;
           }
           adjusted.push(feature_id);
           changed = true;
@@ -115,54 +131,55 @@ export function correlate(capture) {
       }
     }
   }
-  if (adjusted.length!=featureGraphs.length) {
+
+  if (adjusted.length != featureGraphs.length) {
     for (const { feature_id } of featureGraphs) {
       if (!adjusted.includes(feature_id)) {
         console.log("Overlap required between feature " + feature_id + " and features " + adjusted);
       }
     }
-    throw new Error("More overlap required");
+    return { features: {}, frames: {} };
   }
 
 
   // Now construct graphs into coordinates
+  /** @type {{ [feature_id: string]: { [frame_id: string]: import("./util.mjs").Coords } }} */
   const featureCoords = {};
   for (const { feature_id, graph } of featureGraphs) {
+    /** @type {{ [frame_id: string]: import("./util.mjs").Coords }} */
     const coords = {};
-    let x = 0, y = 0, n = 0;
-    for (const { frame_id, heading } of groupedFeatures.get(feature_id)) {
+    for (const { frame_id, heading } of groupedFeatures.get(feature_id) ?? []) {
       const ratio = graph[frame_id];
       const coord = navigate(ratio, (heading + 180) % 360);
-      coords[frame_id] = coord;
-      x += coord[0];
-      y += coord[1];
-      ++n;
+      coords[frame_id] = { lat: coord[0], lon: coord[1] };
     }
     featureCoords[feature_id] = coords;
   }
 
-  // console.log(featureCoords)
-  // let numFrames = Object.keys(capture["frames"]).length;
+  /** @type {{[frame_id: string]: (typeof featureCoords)[string][string]}} */
   const framecoords = {};
-  for (var frame_id in featureCoords[0]) {
-    framecoords[frame_id] = featureCoords[0][frame_id];
+  for (const [frame_id, coords] of Object.entries(featureCoords[featureGraphs[0].feature_id])) {
+    framecoords[frame_id] = { lat: coords.lat, lon: coords.lon };
   }
   adjusted = ["0"];
-  var changed = true;
-  while (adjusted.length!=featureCoords.length && changed == true) {
+  changed = true;
+  // keep iterating for unadjusted, due to side effects of adjusting (or prerequisite adjustments)
+  while (changed == true) {
     changed = false;
     // check if in framecoords then adjust
     for (var feature_id in featureCoords) {
       if (!adjusted.includes(feature_id)) {
         const displacements = [];
+        // see if it can be adjusted:
         for (var frame_id in featureCoords[feature_id]) {
           if (frame_id in framecoords) {
             displacements.push(
-              [framecoords[frame_id][0]-featureCoords[feature_id][frame_id][0],
-              framecoords[frame_id][1]-featureCoords[feature_id][frame_id][1]]
+              [framecoords[frame_id].lat-featureCoords[feature_id][frame_id].lat,
+              framecoords[frame_id].lon-featureCoords[feature_id][frame_id].lon]
             )
           }
         }
+        // if it can be adjusted, do so!
         if (displacements.length!=0) {
           var avgdisplacement = [0,0];
           for (var i in displacements) {
@@ -172,8 +189,8 @@ export function correlate(capture) {
           avgdisplacement[0] /= displacements.length;
           avgdisplacement[1] /= displacements.length;
           for (var frame_id in  featureCoords[feature_id]) {
-            featureCoords[feature_id][frame_id][0] += avgdisplacement[0];
-            featureCoords[feature_id][frame_id][1] += avgdisplacement[1];
+            featureCoords[feature_id][frame_id].lat += avgdisplacement[0];
+            featureCoords[feature_id][frame_id].lon += avgdisplacement[1];
             framecoords[frame_id] = featureCoords[feature_id][frame_id];
           }
           adjusted.push(feature_id);
@@ -182,34 +199,75 @@ export function correlate(capture) {
       }
     }
   }
-  const finalFrameCoords = framecoords;
 
-
+  /** @type {{[feature_id: string]: [number, number, number]}} */
   const featurecoords = {};
-  for (let i = 0; i < featureGraphs.length; ++i) {
-    featurecoords[i] = [0, 0, 0];
+  for (const { feature_id } of featureGraphs) {
+    featurecoords[feature_id] = [0, 0, 0];
   }
   for (const { feature_id, graph } of featureGraphs) {
-    for (const { frame_id, heading } of groupedFeatures.get(feature_id)) {
+    for (const { frame_id, heading } of groupedFeatures.get(feature_id) ?? []) {
       const ratio = graph[frame_id];
       const vector = navigate(ratio, heading);
-      featurecoords[feature_id][0] += finalFrameCoords[frame_id][0] + vector[0];
-      featurecoords[feature_id][1] += finalFrameCoords[frame_id][1] + vector[1];
+      featurecoords[feature_id][0] += framecoords[frame_id].lat + vector[0];
+      featurecoords[feature_id][1] += framecoords[frame_id].lon + vector[1];
       featurecoords[feature_id][2]++;
     }
   }
+  /** @type {{[feature_id: string]: import("./util.mjs").Coords}} */
   const finalFeatureCoords = {};
-  for (let i = 0; i < featureGraphs.length; ++i) {
-    finalFeatureCoords[i] = [
-      featurecoords[i][0] / featurecoords[i][2],
-      featurecoords[i][1] / featurecoords[i][2],
-    ];
+  for (const { feature_id } of featureGraphs) {
+    finalFeatureCoords[feature_id] = {
+      lat: featurecoords[feature_id][0] / featurecoords[feature_id][2],
+      lon: featurecoords[feature_id][1] / featurecoords[feature_id][2]
+    }
+  }
+  const finalFrameCoords = framecoords;
+
+  // Prepare Centroid / Mean Distance
+  const relativeCentre = centroid(Object.values(finalFrameCoords));
+  const baseError = Math.max(...Object.values(capture.frames).map(frame => frame.gps_error ?? 0));
+  const gpsCentre = centroid(
+    Object.values(capture.frames).map(frame => ({
+      ...frame.coords,
+      weight: 1 + baseError / ((frame.gps_error ?? 0) + 0.00001)
+    }))
+  );
+  const scaleup = (
+    meanDistance(gpsCentre, Object.values(capture.frames).map(frame => frame.coords))
+    /
+    meanDistance(relativeCentre, Object.values(finalFrameCoords))
+  );
+
+  // Relative to Absolute Position Shift + Scaling
+
+  // Shift to align relative frames centroid on 0,0 (null-island)
+  for (const point of [...Object.values(finalFeatureCoords), ...Object.values(finalFrameCoords)]) {
+    point.lat -= relativeCentre.lat;
+    point.lon -= relativeCentre.lon;
   }
 
-  return [finalFrameCoords,finalFeatureCoords]
+  // Scale up to real size
+  for (const point of [...Object.values(finalFeatureCoords), ...Object.values(finalFrameCoords)]) {
+    point.lat *= scaleup * 1.2;
+    point.lon *= scaleup * 1.2;
+  }
 
+  // Shift to align frames to gps centroid
+  for (const point of [...Object.values(finalFeatureCoords), ...Object.values(finalFrameCoords)]) {
+    point.lat += gpsCentre.lat;
+    point.lon += gpsCentre.lon;
+  }
 
-  // // then recalculate distances to objects by AAS (sine rule) or using scales again?? then averaging endpoint of line to by angle/distance
-  // // distance to feature as ratio relative to average size, then find centrepoint of navigating
-  // // TODO: use initial frame/point as reference heading based on averaged headings etc
+  const out = { features: {}, frames: {} };
+  for (const [id, coords] of Object.entries(finalFeatureCoords)) {
+    out.features[id] = {
+      coords,
+      tags: capture.features[id],
+    };
+  }
+  for (const [id, coords] of Object.entries(framecoords)) {
+    out.frames[id] = { coords };
+  }
+  return out;
 }

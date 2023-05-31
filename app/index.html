@@ -15,62 +15,69 @@
   </style>
 </head>
 <body>
-  <main>
-    <article id="testing-rig"></article>
-    <article id="bboxes">
-      <fieldset>
-        <legend>BBoxes</legend>
-      </fieldset>
-    </article>
-    <output style="white-space:pre;"></output>
-    <article>
-      <fieldset>
-        <legend>Correlation Results</legend>
-        <div id="preview" style="width:600px;height:400px;"></div>
-      </fieldset>
-    </article>
-  </main>
-  <script type="module">
-    // import { correlateDistances } from "./micro3d.mjs";
-    import * as L from "../lib/leaflet-src.esm.js";
-    import { bboxToSvg } from "./bbox.mjs";
-    import { CaptureRig } from "./rig.mjs";
-    import { correlate } from "./correlate.mjs";
+<header>
+  <h1>Micro3D</h1>
+</header>
+<main>
+  <article id="testing-rig"></article>
+  <article id="bboxes">
+    <fieldset>
+      <legend>BBoxes</legend>
+    </fieldset>
+  </article>
+  <output style="white-space:pre;"></output>
+  <article>
+    <fieldset>
+      <legend>Correlation Results</legend>
+      <div id="preview" style="width:600px;height:400px;"></div>
+    </fieldset>
+  </article>
+</main>
+<script type="module">
+  import * as L from "../lib/leaflet-src.esm.js";
+  import { bboxToSvg } from "./bbox.mjs";
+  import { CaptureRig } from "./rig.mjs";
+  import { correlate } from "./correlate.mjs";
 
-    const map = L.map("preview")
-      .setView([0, 0], 7)//.setView([-33.8831, 151.2008], 20)
-      .addLayer(L.tileLayer(
-        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-        { maxNativeZoom: 19, maxZoom: 21 },
-      ));
+  const map = L.map("preview")
+    .setView([0, 0], 7)//.setView([-33.8831, 151.2008], 20)
+    .addLayer(L.tileLayer(
+      "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+      { maxNativeZoom: 19, maxZoom: 21 },
+    ));
 
-    const markers = L.featureGroup().addTo(map);
+  const markers = L.featureGroup().addTo(map);
 
-    const testingRig = new CaptureRig("testing-rig", (capture) => {
-      const bboxParent = document.querySelector("#bboxes fieldset");
-      const oldSvgs = document.querySelectorAll("#bboxes svg");
-      for (const svg of oldSvgs) {
-        svg.parentElement.removeChild(svg);
-      }
-      for (const [frameId, frame] of Object.entries(capture["frames"])) {
-        bboxParent.insertAdjacentHTML(
-          "beforeend",
-          bboxToSvg(frame, Object.values(frame.features))
-        );
-      }
-      // console.log(capture);
-      // document.querySelector("output").innerText = JSON.stringify(cap, null, 2);
-      try {
-        markers.clearLayers();
-        const [frameCoords, featureCoords] = correlate(capture);
-        for (const [x, y] of Object.values(featureCoords)) {
-          markers.addLayer(L.marker([x, y]));
+  const testingRig = new CaptureRig("testing-rig", (capture) => {
+    const bboxParent = document.querySelector("#bboxes fieldset");
+    const oldSvgs = document.querySelectorAll("#bboxes svg");
+    for (const svg of oldSvgs) {
+      svg.parentElement.removeChild(svg);
+    }
+    for (const [frameId, frame] of Object.entries(capture["frames"])) {
+      bboxParent.insertAdjacentHTML(
+        "beforeend",
+        bboxToSvg(frame, Object.values(frame.features))
+      );
+    }
+    markers.clearLayers();
+    const { features, frames } = correlate(capture);
+    for (const [feature_id, { coords, tags }] of Object.entries(features)) {
+      markers.addLayer(L.marker(
+        [coords.lat, coords.lon],
+        {
+          riseOnHover: true,
+          icon: new L.Icon.Default({ className: "obj" }),
         }
-      } catch (e) {
-        // console.log(e);
-      }
-    });
-    testingRig.MAP.setView([0, 0], 21);
-  </script>
+      ));
+    }
+    for (const [frame_id, { coords }] of Object.entries(frames)) {
+      markers.addLayer(L.marker([coords.lat, coords.lon]));
+    }
+    if (markers.getLayers().length > 0) {
+      map.fitBounds(markers.getBounds());
+    }
+  });
+</script>
 </body>
 </html>
