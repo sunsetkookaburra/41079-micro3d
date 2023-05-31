@@ -12,6 +12,16 @@
   <style>
     .obj { filter: hue-rotate(150deg) }
     article { width: fit-content }
+    canvas {
+      background-repeat: no-repeat;
+      background-size: contain;
+    }
+    output {
+      display: block;
+      border: inset;
+      min-height: 1em;
+      background-color: #eee;
+    }
   </style>
 </head>
 <body>
@@ -19,13 +29,25 @@
   <h1>Micro3D</h1>
 </header>
 <main>
-  <article id="testing-rig"></article>
-  <article id="bboxes">
+  <article id="upload">
     <fieldset>
-      <legend>BBoxes</legend>
+      <legend>Upload Image to Extract Data</legend>
+      <input type="file" accept="image/*"/>
+      <pre><output></output></pre>
     </fieldset>
   </article>
-  <output style="white-space:pre;"></output>
+  <article id="input">
+    <fieldset>
+      <legend>Input Micro3D Capture JSON File</legend>
+      <textarea></textarea><br/>
+      <button>Compute</button>
+    </fieldset>
+  </article>
+  <article id="bboxes">
+    <fieldset>
+      <legend>Preview Bboxes</legend>
+    </fieldset>
+  </article>
   <article>
     <fieldset>
       <legend>Correlation Results</legend>
@@ -38,9 +60,10 @@
   import { bboxToSvg } from "./bbox.mjs";
   import { CaptureRig } from "./rig.mjs";
   import { correlate } from "./correlate.mjs";
+  import { extractEXIF } from "./exif.mjs";
 
   const map = L.map("preview")
-    .setView([0, 0], 7)//.setView([-33.8831, 151.2008], 20)
+    .setView([0, 0], 1)
     .addLayer(L.tileLayer(
       "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
       { maxNativeZoom: 19, maxZoom: 21 },
@@ -48,7 +71,18 @@
 
   const markers = L.featureGroup().addTo(map);
 
-  const testingRig = new CaptureRig("testing-rig", (capture) => {
+  const fileUploadInput = document.querySelector(`#upload input[type="file"]`);
+  fileUploadInput.value = "";
+  fileUploadInput.addEventListener("input", async () => {
+    const data = URL.createObjectURL(fileUploadInput.files[0]);
+    const exif = await fetch(data).then(r => r.arrayBuffer()).then(buf => extractEXIF(buf));
+    document.querySelector("#upload output").innerText = JSON.stringify(exif, null, 2);
+  });
+
+  const captureInputArea = document.querySelector("#input textarea");
+  captureInputArea.value = "";
+  captureInputArea.addEventListener("change", () => {
+    const capture = JSON.parse(captureInputArea.value);
     const bboxParent = document.querySelector("#bboxes fieldset");
     const oldSvgs = document.querySelectorAll("#bboxes svg");
     for (const svg of oldSvgs) {
@@ -57,7 +91,7 @@
     for (const [frameId, frame] of Object.entries(capture["frames"])) {
       bboxParent.insertAdjacentHTML(
         "beforeend",
-        bboxToSvg(frame, Object.values(frame.features))
+        bboxToSvg(frame)
       );
     }
     markers.clearLayers();

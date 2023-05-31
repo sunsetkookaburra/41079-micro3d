@@ -1,7 +1,6 @@
 //@ts-check
 
-import { angleTo, bearingAcuteAngle } from "../math.mjs";
-import { centroid, meanDistance } from "./util.mjs";
+import { centroid, meanDistance, bearingAcuteAngle, angleTo } from "./util.mjs";
 
 /**
  *

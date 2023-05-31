@@ -125,3 +125,26 @@ export function meanDistance(from, points) {
   }
   return sumDist / points.length;
 }
+
+/**
+ *
+ * @param {number} a
+ * @param {number} b
+ * @returns {number}
+ */
+export function bearingAcuteAngle(a, b) {
+  const dif = Math.abs(a - b);
+  return dif > 180 ? 360 - dif : dif;
+}
+
+/** Angle to point, +X Right, +Y Up (cartesian)
+ * @param {{x:number,y:number}} point
+ * @param {{x:number,y:number}} frame
+ * @param {{x:number,y:number}} fov
+*/
+export function angleTo(point, frame, fov) {
+  return {
+    x: point.x / frame.x * fov.x - fov.x / 2,
+    y: -(point.y / frame.y * fov.y - fov.y / 2),
+  };
+}

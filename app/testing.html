@@ -12,6 +12,12 @@
   <style>
     .obj { filter: hue-rotate(150deg) }
     article { width: fit-content }
+    output {
+      display: block;
+      border: inset;
+      min-height: 1em;
+      background-color: #eee;
+    }
   </style>
 </head>
 <body>
@@ -22,7 +28,12 @@
         <legend>BBoxes</legend>
       </fieldset>
     </article>
-    <output style="white-space:pre;"></output>
+    <article id="output">
+      <fieldset>
+        <legend>Testing Output</legend>
+        <pre><output></output></pre>
+      </fieldset>
+    </article>
     <article>
       <fieldset>
         <legend>Correlation Results</legend>
@@ -46,6 +57,7 @@
     const markers = L.featureGroup().addTo(map);
 
     const testingRig = new CaptureRig("testing-rig", (capture) => {
+      document.querySelector("#output output").innerText = JSON.stringify(capture, null, 2);
       const bboxParent = document.querySelector("#bboxes fieldset");
       const oldSvgs = document.querySelectorAll("#bboxes svg");
       for (const svg of oldSvgs) {
