@@ -101,11 +101,12 @@ export function wgs84Navigate({from, heading, distance}) {
 export function centroid(points) {
   let sumLat = 0, sumLatWeight = 0;
   let sumLon = 0, sumLonWeight = 0;
-  for (const { lat, lon, weight } of points) {
-    sumLat += lat * (weight ?? 1);
-    sumLatWeight += weight ?? 1;
-    sumLon += lon * (weight ?? 1);
-    sumLonWeight += weight ?? 1;
+  for (const { lat, lon, weight: weightOrUndefined } of points) {
+    const weight = weightOrUndefined ?? 1;
+    sumLat += lat * weight;
+    sumLatWeight += weight;
+    sumLon += lon * weight;
+    sumLonWeight += weight;
   }
   return {
     lat: sumLat / sumLatWeight,
