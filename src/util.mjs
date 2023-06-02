@@ -102,9 +102,9 @@ export function centroid(points) {
   let sumLat = 0, sumLatWeight = 0;
   let sumLon = 0, sumLonWeight = 0;
   for (const { lat, lon, weight } of points) {
-    sumLat += lat;
+    sumLat += lat * (weight ?? 1);
     sumLatWeight += weight ?? 1;
-    sumLon += lon;
+    sumLon += lon * (weight ?? 1);
     sumLonWeight += weight ?? 1;
   }
   return {

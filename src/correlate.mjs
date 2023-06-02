@@ -248,8 +248,8 @@ export function correlate(capture) {
 
   // Scale up to real size
   for (const point of [...Object.values(finalFeatureCoords), ...Object.values(finalFrameCoords)]) {
-    point.lat *= scaleup * 1.2;
-    point.lon *= scaleup * 1.2;
+    point.lat *= scaleup;
+    point.lon *= scaleup;
   }
 
   // Shift to align frames to gps centroid
