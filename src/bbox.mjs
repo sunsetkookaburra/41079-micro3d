@@ -14,7 +14,7 @@ export function bboxToSvg(frame) {
     svg += `<image width="${frame.height}" height="${frame.width}" href="${frame.url}"/>\n`;
   }
   for (const [id, bbox] of Object.entries(frame.features)) {
-    svg += `<text x="${bbox.x}" y="${bbox.y}" style="font-size:40px">id:${id}</text>\n`
+    svg += `<text x="${bbox.x}" y="${bbox.y}" fill="#fff" style="font-size:${(frame.height / 7).toFixed(0)}px">id:${id}</text>\n`
     svg += `<rect x="${bbox.x}" y="${bbox.y}" width="${bbox.w}" height="${bbox.h}" fill="none" stroke="#fff" stroke-width="20"/>\n`;
   }
   svg += `</svg>`;
